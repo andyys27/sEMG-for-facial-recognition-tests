@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import butter, iirnotch, filtfilt
+from scipy.fft import fft, fftfreq
 
 # Remover offset
 def offset(signal):
@@ -39,3 +40,10 @@ def envelope(signal, fs):
     window_samples = int((window_ms / 1000) * fs)
     env = np.sqrt(np.convolve(signal**2, np.ones(window_samples)/window_samples, mode='same'))
     return env
+
+def fourier(signal, fs):
+    n = len(signal)
+    yf = fft(signal)
+    xf = fftfreq(n, 1/fs)[:n//2]
+    mag = 2.0 / n * np.abs(yf[0:n//2])
+    return xf, mag

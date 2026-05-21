@@ -19,6 +19,7 @@ EMG4 = data.iloc[:, 4].values
 
 # Calculo de frecuencia de muestreo 
 fs = 1.0 / np.mean(np.diff(time))
+print(fs)
 
 # Procesamiento de la señal EMG 
 processed_EMG1 = emg_processing_pipeline(EMG1, fs)
@@ -32,20 +33,41 @@ signals = [processed_EMG1, processed_EMG2, processed_EMG3, processed_EMG4]
 for i, sig in enumerate(signals, 1):
     plt.figure(figsize=(12, 6))
     
-    plt.subplot(3,1,1)
-    plt.plot(time, sig["raw"])
+    plt.subplot(3,2,1)
+    plt.plot(time, sig["raw"], color='tab:blue')
     plt.title(f"EMG{i} - Raw")
     plt.legend(loc="upper right")
+    plt.grid(True)
     
-    plt.subplot(3,1,2)
-    plt.plot(time, sig["filtered"])
+    plt.subplot(3,2,2)
+    plt.plot(sig["raw xf"], sig["raw mag"], color='tab:red')
+    plt.title(f"EMG{i} - Fourier analysis from Raw")
+    plt.legend(loc="upper right")
+    plt.grid(True)
+
+    plt.subplot(3,2,3)
+    plt.plot(time, sig["filtered"], color='tab:orange')
     plt.title(f"EMG{i} - Filtered")
     plt.legend(loc="upper right")
+    plt.grid(True)
     
-    plt.subplot(3,1,3)
-    plt.plot(time, sig["envelope"])
+    plt.subplot(3,2,4)
+    plt.plot(sig["clean xf"], sig["clean mag"], color='tab:green')
+    plt.title(f"EMG{i} - Fourier analysis from Clean")
+    plt.legend(loc="upper right")
+    plt.grid(True)
+
+    plt.subplot(3,2,5)
+    plt.plot(time, sig["envelope"], color='tab:purple')
     plt.title(f"EMG{i} - Envelope")
     plt.legend(loc="upper right")
+    plt.grid(True)
+
+    plt.subplot(3,2,6)
+    plt.plot(time, sig["normalized"], color='tab:gray')
+    plt.title(f"EMG{i} - Normalized")
+    plt.legend(loc="upper right")
+    plt.grid(True)
     
     plt.tight_layout()
     plt.show()
