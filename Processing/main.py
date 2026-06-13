@@ -11,7 +11,7 @@ data = data.fillna(0)
 timestamps = pd.to_datetime(data.iloc[:, 0])
 time = (timestamps - timestamps.iloc[0]).dt.total_seconds()
 
-# Extraer canales EMG
+# Extraer canalces EMG
 EMG1 = data.iloc[:, 1].values
 EMG2 = data.iloc[:, 2].values
 EMG3 = data.iloc[:, 3].values
