@@ -3,14 +3,11 @@ from scipy.signal import butter, iirnotch, filtfilt
 from scipy.fft import fft, fftfreq
 
 # Remover offset
-def offset(signal):
+def remove_offset(signal):
     return signal - np.mean(signal)
 
 # Butterworth pasa-banda
-def bandpass(signal, fs):
-    low = 20 
-    high = 450
-    order = 4
+def bandpass(signal, fs, low = 20, high = 450, order = 4):
     nyq = fs / 2
     lowcut = low / nyq
     highcut = high / nyq
@@ -18,25 +15,18 @@ def bandpass(signal, fs):
     return filtfilt(b_notch, a_notch, signal)
 
 # IIR notch para ruido de linea
-def notch(signal, fs):
-    freq = 60.0
-    Q = 30.0
+def notch(signal, fs, freq = 60, Q = 30):    
     w0 = freq / (fs / 2)
     b_notch, a_notch = iirnotch(w0, Q)
     return filtfilt(b_notch, a_notch, signal)
 
-# Rectificar senal
-def rectify(signal):
-    return np.abs(signal)
-
-# Normalizacion max
-def scale_max(signal):
-    mvc = signal / np.max(np.abs(signal))
-    return mvc
+# Normalizacion Z Score
+def scale_zscore(signal):
+    std = np.std(signal)
+    return (signal - np.mean(signal)) / std
 
 # Envolvente RMS
-def envelope(signal, fs):
-    window_ms = 50
+def envelope_rms(signal, fs, window_ms=50):
     window_samples = int((window_ms / 1000) * fs)
     env = np.sqrt(np.convolve(signal**2, np.ones(window_samples)/window_samples, mode='same'))
     return env
