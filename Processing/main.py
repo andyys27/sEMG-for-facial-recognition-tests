@@ -11,63 +11,72 @@ data = data.fillna(0)
 timestamps = pd.to_datetime(data.iloc[:, 0])
 time = (timestamps - timestamps.iloc[0]).dt.total_seconds()
 
-# Extraer canalces EMG
-EMG1 = data.iloc[:, 1].values
-EMG2 = data.iloc[:, 2].values
-EMG3 = data.iloc[:, 3].values
-EMG4 = data.iloc[:, 4].values
+data.iloc[:, 1:] = data.iloc[:, 1:].fillna(0)
 
-# Calculo de frecuencia de muestreo 
+# Frecuencia de muestreo promedio
 fs = 1.0 / np.mean(np.diff(time))
-print(fs)
+print(f"Frecuencia de muestreo: {fs:.2f} Hz")
 
-# Procesamiento de la señal EMG 
-processed_EMG1 = emg_processing_pipeline(EMG1, fs)
-processed_EMG2 = emg_processing_pipeline(EMG2, fs)
-processed_EMG3 = emg_processing_pipeline(EMG3, fs)
-processed_EMG4 = emg_processing_pipeline(EMG4, fs)
+# Cantidad de canales EMG
+emg_channels = [c for c in data.columns if "EMG" in c]
 
-signals = [processed_EMG1, processed_EMG2, processed_EMG3, processed_EMG4]
+# Diccionario para creacion de CSV
+processed_data_dict = {
+    "Timestamp": data.iloc[:, 0].values,
+    "Time_Seconds": time
+}
 
-# Visualizacion de resultados
-for i, sig in enumerate(signals, 1):
-    plt.figure(figsize=(12, 6))
+# Procesamiento por canal
+for col in emg_channels:
+    raw_signal = data[col].values
+    sig = emg_processing_pipeline(raw_signal, fs)
+
+    # Diccionario de resultados
+    processed_data_dict[f"{col}_Raw"] = sig["raw"]
+    processed_data_dict[f"{col}_Filtered"] = sig["filtered"]
+    processed_data_dict[f"{col}_Envelope_RMS"] = sig["envelope"]
+    processed_data_dict[f"{col}_Normalized_Z"] = sig["normalized"]
     
-    plt.subplot(3,2,1)
-    plt.plot(time, sig["raw"], color='tab:blue')
-    plt.title(f"EMG{i} - Raw")
-    plt.legend(loc="upper right")
-    plt.grid(True)
+    fig, axes = plt.subplots(3, 2, figsize=(14, 10))
+    fig.suptitle(f"Análisis Completo de Canal: {col}", fontsize=14, fontweight='bold')
     
-    plt.subplot(3,2,2)
-    plt.plot(sig["raw xf"], sig["raw mag"], color='tab:red')
-    plt.title(f"EMG{i} - Fourier analysis from Raw")
-    plt.legend(loc="upper right")
-    plt.grid(True)
-
-    plt.subplot(3,2,3)
-    plt.plot(time, sig["filtered"], color='tab:orange')
-    plt.title(f"EMG{i} - Filtered")
-    plt.legend(loc="upper right")
-    plt.grid(True)
+    # Raw vs Fourier Raw
+    axes[0, 0].plot(time, sig["raw"], color='tab:blue', label="Original")
+    axes[0, 0].set_title("Señal Original (Raw)")
+    axes[0, 0].grid(True)
+    axes[0, 0].legend()
     
-    plt.subplot(3,2,4)
-    plt.plot(sig["clean xf"], sig["clean mag"], color='tab:green')
-    plt.title(f"EMG{i} - Fourier analysis from Clean")
-    plt.legend(loc="upper right")
-    plt.grid(True)
+    axes[0, 1].plot(sig["raw xf"], sig["raw mag"], color='tab:red', label="Espectro")
+    axes[0, 1].set_title("Análisis de Fourier (Raw)")
+    axes[0, 1].grid(True)
+    axes[0, 1].legend()
 
-    plt.subplot(3,2,5)
-    plt.plot(time, sig["envelope"], color='tab:purple')
-    plt.title(f"EMG{i} - Envelope")
-    plt.legend(loc="upper right")
-    plt.grid(True)
+    # Filtered vs Fourier Clean
+    axes[1, 0].plot(time, sig["filtered"], color='tab:orange', label="Filtrada")
+    axes[1, 0].set_title("Señal Filtrada (Bandpass + Notch)")
+    axes[1, 0].grid(True)
+    axes[1, 0].legend()
+    
+    axes[1, 1].plot(sig["clean xf"], sig["clean mag"], color='tab:green', label="Espectro Limpio")
+    axes[1, 1].set_title("Análisis de Fourier (Limpia)")
+    axes[1, 1].grid(True)
+    axes[1, 1].legend()
 
-    plt.subplot(3,2,6)
-    plt.plot(time, sig["normalized"], color='tab:gray')
-    plt.title(f"EMG{i} - Normalized")
-    plt.legend(loc="upper right")
-    plt.grid(True)
+    # Envolvente vs Normalizada
+    axes[2, 0].plot(time, sig["envelope"], color='tab:purple', label="Envolvente")
+    axes[2, 0].set_title("Envolvente RMS")
+    axes[2, 0].grid(True)
+    axes[2, 0].legend()
+
+    axes[2, 1].plot(time, sig["normalized"], color='tab:gray', label="Z-score")
+    axes[2, 1].set_title("Envolvente Normalizada")
+    axes[2, 1].grid(True)
+    axes[2, 1].legend()
     
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f"../Test1/Results/Análisis_EMG_{col}.png")
+    plt.close()
+
+processed_df = pd.DataFrame(processed_data_dict)
+output_path = "../Test1/Data/FREEEMG_Processed_Signals.csv"
+processed_df.to_csv(output_path, index=False)
