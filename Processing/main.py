@@ -74,7 +74,7 @@ for col in emg_channels:
     axes[2, 1].legend()
     
     plt.tight_layout()
-    plt.savefig(f"../Test1/Results/Análisis_EMG_{col}.png")
+    plt.savefig(f"../Test1/Results/Análisis_{col}.png")
     plt.close()
 
 processed_df = pd.DataFrame(processed_data_dict)
