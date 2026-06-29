@@ -9,49 +9,37 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Configuración
-# ──────────────────────────────────────────────────────────────────────────────
-
+# Configuracion
 @dataclass
 class Config:
     # Rutas
-    csv_path:    str = "../Test1/Data/FREEEMG_Processed_Signals.csv"
-    output_path: str = "../Test1"
+    csv_path:    str = "../Test2/Data/FREEEMG_Processed_Signals.csv"
+    output_path: str = "../Test2"
 
     # Protocolo
     num_blocks: int = 5
-    emotion_cycle: list = field(default_factory=lambda: [
+    emotion_cycle: list[str] = field(default_factory=lambda: [
         "Sonrisa", "Disgusto", "Sorprendido", "Triste"
     ])
 
     # Grupos musculares: cada lista agrupa canales equivalentes anatómicamente.
     # Un evento de grupo se activa si AL MENOS UNO de sus canales supera umbral.
-    channel_groups: dict = field(default_factory=lambda: {
-        "Grupo_Lateral": ["EMG1_Envelope_RMS", "EMG4_Envelope_RMS"],
-        "Grupo_Medial":  ["EMG2_Envelope_RMS", "EMG3_Envelope_RMS"],
+    channel_groups: dict[str, list[str]] = field(default_factory=lambda: {
+        "Grupo_Lateral": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
+        "Grupo_Medial":  ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
     })
 
-    # Mínimo de grupos que deben coincidir para validar un evento consenso
-    min_groups_active: int = 1   # Con 1 ya es robusto; sube a 2 para más estrictez
+# Mínimo de grupos que deben coincidir para validar un evento consenso
+    min_groups_active: int = 1
 
     # Baseline y umbral
-    # k puede definirse globalmente (k_baseline) o por grupo muscular
-    # (k_baseline_per_group). Si se define por grupo, tiene prioridad.
-    # Esto permite calibrar sensibilidad de forma independiente para grupos
-    # con rangos de amplitud muy distintos (ej. Lateral en 1e-5, Medial en 1e-4).
-    baseline_window_sec: float = 20.0
-    k_baseline: float = 3.0
-    k_baseline_per_group: dict = field(default_factory=dict)
-    # Ejemplo de uso con k por grupo:
-    #   k_baseline_per_group = {
-    #       "Grupo_Lateral": 3.0,   # umbral más bajo para señal débil
-    #       "Grupo_Medial":  4.5,   # umbral más alto para señal fuerte
-    #   }
+    baseline_window_sec:  float = 20.0
+    k_baseline:           float = 3.0
+    k_baseline_per_group: dict[str, float] = field(default_factory=dict)
 
     # Rango de interés (excluye reposo inicial/final de grabación)
-    t_start: float = 35.0
-    t_end:   float = 755.0
+    t_start: float = 0.0
+    t_end:   float = 380.0
 
     # Suavizado del envelope antes de detectar cruces de umbral
     smoothing_window_sec: float = 0.5
@@ -62,13 +50,10 @@ class Config:
     # Tolerancia temporal para asociar eventos de diferentes grupos/canales
     tolerance_sec: float = 3.0
 
-    # Gap filling: si dos activaciones del mismo canal están separadas por
-    # menos de este tiempo, se fusionan en un único evento continuo.
-    # Resuelve gestos que bajan brevemente del umbral a mitad de activación.
+    # Gap filling
     gap_fill_sec: float = 1.5
 
     # Duración válida de un evento por canal (DESPUÉS del gap filling)
-    # El protocolo mínimo es 3s; 2.5s da tolerancia sin admitir artefactos cortos
     min_event_dur_sec: float = 2.5
     max_event_dur_sec: float = 10.0
 
@@ -80,10 +65,7 @@ class Config:
     plot_dpi: int = 200
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Utilidades de señal
-# ──────────────────────────────────────────────────────────────────────────────
-
 def compute_threshold(signal: np.ndarray, time: np.ndarray,
                       baseline_window_sec: float, k: float) -> float:
     """Umbral adaptativo por canal: mean + k·std sobre ventana de reposo inicial."""
@@ -104,10 +86,7 @@ def smooth_signal(signal: np.ndarray, fs: float, window_sec: float) -> np.ndarra
     return pd.Series(signal).rolling(window=w, center=True).mean().ffill().bfill().values
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Detección por canal individual
-# ──────────────────────────────────────────────────────────────────────────────
-
 def detect_channel_events(
     signal: np.ndarray,
     time:   np.ndarray,
@@ -115,28 +94,11 @@ def detect_channel_events(
     fs:     float,
     cfg:    Config,
 ) -> list[dict]:
-    """
-    Detecta activaciones en un canal individual por cruce de umbral.
-
-    Pipeline interno:
-      1. Suavizado del envelope
-      2. Detección de todos los cruces de umbral (sin filtro de duración aún)
-      3. Gap filling: fusiona pares de eventos separados por < gap_fill_sec.
-         Un gesto real puede bajar brevemente del umbral sin haber terminado;
-         sin gap filling eso genera dos eventos cortos o un falso negativo.
-      4. Filtro de duración: descarta eventos < min_event_dur_sec (artefactos)
-         y > max_event_dur_sec (fusiones erróneas o artefactos largos).
-      5. Deduplicación: si dos eventos válidos quedan a < min_inter_event_sec,
-         conserva el de mayor amplitud pico.
-
-    Retorna lista de dicts: onset_idx, offset_idx, onset_t, offset_t,
-                            peak_amp, mean_amp.
-    """
     sig_smooth = smooth_signal(signal, fs, cfg.smoothing_window_sec)
     active     = sig_smooth > threshold
     roi        = (time >= cfg.t_start) & (time <= cfg.t_end)
 
-    # ── Paso 1: detectar todos los segmentos activos sin filtro de duración ──
+    # 1. Detectar todos los segmentos activos sin filtro de duración
     raw_events = []
     in_event   = False
     onset_idx  = None
@@ -162,7 +124,7 @@ def detect_channel_events(
     if not raw_events:
         return []
 
-    # ── Paso 2: gap filling ───────────────────────────────────────────────────
+    # 2. Gap filling
     gap_samples = cfg.gap_fill_sec * fs
     merged = [list(raw_events[0])]
 
@@ -173,7 +135,7 @@ def detect_channel_events(
         else:
             merged.append([on, off])
 
-    # ── Paso 3: filtro de duración y cálculo de amplitudes ───────────────────
+    # 3. Filtro de duración y cálculo de amplitudes 
     events = []
     for (on, off) in merged:
         dur = time[off] - time[on]
@@ -191,7 +153,7 @@ def detect_channel_events(
     if len(events) <= 1:
         return events
 
-    # ── Paso 4: deduplicación por distancia mínima ────────────────────────────
+    # 4. Deduplicación por distancia mínima
     filtered = [events[0]]
     for ev in events[1:]:
         prev = filtered[-1]
@@ -203,22 +165,11 @@ def detect_channel_events(
     return filtered
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Consenso por grupos musculares
-# ──────────────────────────────────────────────────────────────────────────────
-
 def detect_group_events(
     per_channel_events: dict[str, list[dict]],
     cfg: Config,
 ) -> dict[str, list[dict]]:
-    """
-    Para cada grupo muscular, fusiona los eventos de sus canales.
-    Un evento de grupo existe si AL MENOS UNO de sus canales lo detecta.
-    Si ambos canales del grupo detectan eventos solapados en tiempo, se
-    toma el onset mínimo y el offset máximo (unión temporal).
-
-    Retorna dict grupo → lista de eventos de grupo.
-    """
     group_events: dict[str, list[dict]] = {}
 
     for group_name, ch_list in cfg.channel_groups.items():
@@ -278,13 +229,6 @@ def build_consensus_events(
     group_events: dict[str, list[dict]],
     cfg: Config,
 ) -> list[dict]:
-    """
-    Fusiona eventos de los grupos musculares en eventos globales consenso.
-    Un evento consenso requiere que ≥ min_groups_active grupos coincidan
-    dentro de tolerance_sec.
-
-    Retorna lista ordenada de eventos consenso con onset/offset globales.
-    """
     group_names = list(group_events.keys())
 
     # Pool de todos los eventos de todos los grupos
@@ -342,20 +286,13 @@ def build_consensus_events(
     return clean
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Extracción de épocas
-# ──────────────────────────────────────────────────────────────────────────────
-
 def extract_epochs(
     df: pd.DataFrame,
     time: np.ndarray,
     consensus_events: list[dict],
     cfg: Config,
 ) -> list[pd.DataFrame]:
-    """
-    Extrae ventanas del DataFrame para cada evento consenso.
-    Agrega columnas: Block, Emotion, Epoch_Time, N_Groups, Active_Channels.
-    """
     emotion_cycle = cfg.emotion_cycle
     epochs = []
 
@@ -383,10 +320,7 @@ def extract_epochs(
     return epochs
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Exportación
-# ──────────────────────────────────────────────────────────────────────────────
-
 def export_csvs(epochs: list[pd.DataFrame], cfg: Config) -> None:
     """CSV individual por bloque/emoción + total por emoción."""
     root = Path(cfg.output_path)
@@ -439,10 +373,7 @@ def export_metrics(
     return df_metrics
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Gráficas
-# ──────────────────────────────────────────────────────────────────────────────
-
 EMOTION_COLORS = {
     "Sonrisa":     "#27ae60",
     "Disgusto":    "#e74c3c",
@@ -452,8 +383,8 @@ EMOTION_COLORS = {
 
 # Colores por grupo muscular para gráficas individuales
 GROUP_COLORS = {
-    "Grupo_Lateral": "#e67e22",
-    "Grupo_Medial":  "#16a085",
+    "Grupo_A": "#e67e22",
+    "Grupo_B":  "#16a085",
 }
 
 
@@ -465,13 +396,6 @@ def plot_per_channel(
     consensus_events: list[dict],
     cfg: Config,
 ) -> None:
-    """
-    Una figura por canal. Muestra:
-      - Señal envelope
-      - Línea de umbral
-      - Eventos crudos del canal (líneas de onset/offset punteadas)
-      - Épocas consenso sombreadas por emoción
-    """
     root          = Path(cfg.output_path)
     emotion_cycle = cfg.emotion_cycle
 
@@ -544,10 +468,6 @@ def plot_comparative(
     consensus_events: list[dict],
     cfg: Config,
 ) -> None:
-    """
-    4 subplots alineados en tiempo (uno por canal), agrupados visualmente
-    por grupo muscular. Incluye línea de umbral y épocas consenso.
-    """
     root   = Path(cfg.output_path)
     # Ordenar canales: primero grupo lateral, luego medial
     ch_order = []
@@ -628,10 +548,6 @@ def plot_group_summary(
     df:               pd.DataFrame,
     cfg:              Config,
 ) -> None:
-    """
-    Gráfica de diagnóstico: eventos detectados por grupo muscular vs consenso.
-    Útil para auditar qué grupos contribuyeron a cada evento final.
-    """
     root          = Path(cfg.output_path)
     emotion_cycle = cfg.emotion_cycle
     group_names   = list(cfg.channel_groups.keys())
@@ -643,7 +559,7 @@ def plot_group_summary(
     # Subplots por grupo
     for ax, gname in zip(axes[:n_groups], group_names):
         gcolor = GROUP_COLORS.get(gname, "#555555")
-        # Señal media del grupo (solo para contexto visual)
+        # Señal media del grupo 
         chs_in_group = [c for c in cfg.channel_groups[gname] if c in df.columns]
         if chs_in_group:
             mean_sig = df[chs_in_group].mean(axis=1).values
@@ -694,36 +610,20 @@ def plot_group_summary(
     print(f"  → diagnostico_grupos.png")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Pipeline principal
-# ──────────────────────────────────────────────────────────────────────────────
-
 def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
-    """
-    Pipeline completo de segmentación EMG por emociones.
-
-    Retorna df_metrics con una fila por evento detectado.
-    """
     if cfg is None:
         cfg = Config()
 
     SEP = "=" * 62
-    print(SEP)
-    print("  EMG Epoch Slicing — Segmentación por Emociones Faciales")
-    print(SEP)
 
-    # ── 1. Carga ──────────────────────────────────────────────────────────────
-    print(f"\n[1/6] Cargando datos: {cfg.csv_path}")
+    # 1. Carga
     df   = pd.read_csv(cfg.csv_path)
     time = df["Time_Seconds"].values
     fs   = 1.0 / np.mean(np.diff(time))
     print(f"      {len(df):,} muestras  |  fs ≈ {fs:.1f} Hz  |  {time[-1]:.1f}s total")
 
-    # ── 2. Umbrales por canal ─────────────────────────────────────────────────
-    # Si k_baseline_per_group está definido, cada grupo usa su propio k.
-    # Útil cuando los grupos musculares tienen amplitudes muy distintas:
-    # un mismo k puede ser demasiado permisivo para uno y demasiado estricto
-    # para el otro. Los canales sin grupo asignado usan k_baseline global.
+    # 2. Umbrales por canal
     all_channels = [ch for chs in cfg.channel_groups.values() for ch in chs]
 
     # Mapa canal → k efectivo
@@ -736,22 +636,19 @@ def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
     using_per_group = bool(cfg.k_baseline_per_group)
     if using_per_group:
         k_summary = ", ".join(f"{g}→k={v}" for g, v in cfg.k_baseline_per_group.items())
-        print(f"\n[2/6] Umbrales por canal con k por grupo ({k_summary})")
+        print(f"\nUmbrales por canal con k por grupo ({k_summary})")
     else:
-        print(f"\n[2/6] Umbrales por canal (baseline t ≤ {cfg.baseline_window_sec}s, k = {cfg.k_baseline})")
+        print(f"\nUmbrales por canal (baseline t ≤ {cfg.baseline_window_sec}s, k = {cfg.k_baseline})")
 
     thresholds: dict[str, float] = {}
     for ch in all_channels:
-        if ch not in df.columns:
-            print(f"      ⚠ {ch} no encontrado en el CSV — omitido.")
-            continue
         k_eff = ch_to_k.get(ch, cfg.k_baseline)
         th = compute_threshold(df[ch].values, time, cfg.baseline_window_sec, k_eff)
         thresholds[ch] = th
         print(f"      {ch} (k={k_eff}): {th:.4e}")
 
-    # ── 3. Detección por canal ────────────────────────────────────────────────
-    print(f"\n[3/6] Detección de activaciones por canal "
+    # 3. Detección por canal 
+    print(f"\nDetección de activaciones por canal "
           f"(ROI: {cfg.t_start}–{cfg.t_end}s)")
     per_channel_events: dict[str, list[dict]] = {}
     for ch in thresholds:
@@ -759,8 +656,8 @@ def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
         per_channel_events[ch] = evs
         print(f"      {ch}: {len(evs):2d} activaciones")
 
-    # ── 4. Consenso por grupos musculares ─────────────────────────────────────
-    print(f"\n[4/6] Consenso por grupos musculares "
+    # 4. Consenso por grupos musculares
+    print(f"\nConsenso por grupos musculares "
           f"(≥ {cfg.min_groups_active} grupo(s) activo(s))")
     group_events    = detect_group_events(per_channel_events, cfg)
     consensus_events = build_consensus_events(group_events, cfg)
@@ -773,68 +670,47 @@ def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
     status = "✓" if n_detected == total_expected else "⚠"
     print(f"\n      {status} Eventos detectados: {n_detected} / {total_expected} esperados")
 
-    if n_detected != total_expected:
-        print(f"\n  ADVERTENCIA: detección incompleta o con falsos positivos.")
-        print("  Parámetros a ajustar:")
-        print("    k_baseline_per_group → calibra k de forma independiente por grupo muscular")
-        print("                           (útil cuando los grupos tienen amplitudes muy distintas)")
-        print("    k_baseline           → k global de fallback si k_baseline_per_group está vacío")
-        print("    min_groups_active    → baja a 1 para mayor sensibilidad")
-        print("    min_inter_event_sec  → ajusta si el protocolo tiene ciclos más cortos/largos")
-        print("    gap_fill_sec         → sube si hay dips dentro de gestos reales")
-
-    # ── 5. Extracción y exportación ───────────────────────────────────────────
-    print(f"\n[5/6] Extrayendo épocas y exportando CSVs")
+    # 5. Extracción y exportación 
     epochs     = extract_epochs(df, time, consensus_events, cfg)
     export_csvs(epochs, cfg)
     df_metrics = export_metrics(consensus_events, thresholds, cfg)
     print(f"      {len(epochs)} épocas guardadas\n")
     print(df_metrics.to_string(index=False))
 
-    # ── 6. Gráficas ───────────────────────────────────────────────────────────
-    print(f"\n[6/6] Generando gráficas")
+    # 6. Gráficas
     plot_per_channel(df, time, per_channel_events, thresholds, consensus_events, cfg)
     plot_comparative(df, time, thresholds, consensus_events, cfg)
     plot_group_summary(group_events, consensus_events, time, df, cfg)
 
-    print(f"\n✓ Pipeline completado. Salida en: {cfg.output_path}")
-    print(SEP)
     return df_metrics
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Punto de entrada
-# ──────────────────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
     cfg = Config(
-        csv_path    = "../Test1/Data/FREEEMG_Processed_Signals.csv",
-        output_path = "../Test1",
+        csv_path    = "../Test2/Data/FREEEMG_Processed_Signals.csv",
+        output_path = "../Test2",
 
         # Protocolo
         num_blocks  = 10,
 
         # Topología muscular
-        # Grupo A (Lateral): CH1 izq + CH4 der — misma zona, lados opuestos
-        # Grupo B (Medial):  CH2 izq + CH3 der — otra zona muscular
+
         channel_groups = {
-            "Grupo_Lateral": ["EMG1_Envelope_RMS", "EMG4_Envelope_RMS"],
-            "Grupo_Medial":  ["EMG2_Envelope_RMS", "EMG3_Envelope_RMS"],
+            "Grupo_A": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
+            "Grupo_B":  ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
         },
         min_groups_active = 1,   # 1 = basta con que un grupo lo detecte
 
-        # Umbral por grupo muscular (tiene prioridad sobre k_baseline global)
-        # Ajusta cada k de forma independiente si los grupos tienen amplitudes distintas:
-        #   k más bajo  → umbral más sensible (captura activaciones débiles)
-        #   k más alto  → umbral más estricto (rechaza ruido y artefactos)
+        # Umbral por grupo muscular
         k_baseline_per_group = {
-            "Grupo_Lateral": 3.0,   # CH1 + CH4: señal más débil → k menor
-            "Grupo_Medial":  4.5,   # CH2 + CH3: señal más fuerte → k mayor
+            "Grupo_A": 3.0,   
+            "Grupo_B":  4.5,  
         },
-        k_baseline          = 3.0,  # fallback si un grupo no tiene k asignado
+        k_baseline          = 3.0,
         baseline_window_sec = 20.0,
 
-        # Rango temporal de la grabación útil
+        # Rango1 temporal de la grabación útil
         t_start             = 35.0,
         t_end               = 700.0,
         min_inter_event_sec = 10.0,   # Separación mínima entre gestos (s)
