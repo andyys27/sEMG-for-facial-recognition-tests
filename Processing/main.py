@@ -1,11 +1,15 @@
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from pipeline import emg_processing_pipeline
 
 # Carga de datos
-data = pd.read_csv("../Test1/Data/FREEEMG_EMG_with_timestamp.csv")
+data = pd.read_csv("../Test2/Data/FREEEMG_EMG_with_timestamp.csv")
 data = data.fillna(0) 
+
+# Crear carpeta de resultados 
+Path("../Test1/Results").mkdir(parents=True, exist_ok=True)
 
 # Convertir timestamp a ms
 timestamps = pd.to_datetime(data.iloc[:, 0])
@@ -74,9 +78,9 @@ for col in emg_channels:
     axes[2, 1].legend()
     
     plt.tight_layout()
-    plt.savefig(f"../Test1/Results/Análisis_{col}.png")
+    plt.savefig(f"../Test2/Results/Análisis_{col}.png")
     plt.close()
 
 processed_df = pd.DataFrame(processed_data_dict)
-output_path = "../Test1/Data/FREEEMG_Processed_Signals.csv"
+output_path = "../Test2/Data/FREEEMG_Processed_Signals.csv"
 processed_df.to_csv(output_path, index=False)

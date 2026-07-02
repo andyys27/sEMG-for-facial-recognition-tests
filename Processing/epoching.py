@@ -13,38 +13,36 @@ from typing import Optional
 @dataclass
 class Config:
     # Rutas
-    csv_path:    str = "../Test2/Data/FREEEMG_Processed_Signals.csv"
+    csv_path: str = "../Test2/Data/FREEEMG_Processed_Signals.csv"
     output_path: str = "../Test2"
 
     # Protocolo
     num_blocks: int = 5
     emotion_cycle: list[str] = field(default_factory=lambda: [
-        "Sonrisa", "Disgusto", "Sorprendido", "Triste"
-    ])
+        "Sonrisa", "Disgusto", "Sorprendido", "Triste"])
 
-    # Grupos musculares: cada lista agrupa canales equivalentes anatómicamente.
-    # Un evento de grupo se activa si AL MENOS UNO de sus canales supera umbral.
+    # Grupos musculares
     channel_groups: dict[str, list[str]] = field(default_factory=lambda: {
-        "Grupo_Lateral": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
-        "Grupo_Medial":  ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
+        "Grupo_A": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
+        "Grupo_B":  ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
     })
 
-# Mínimo de grupos que deben coincidir para validar un evento consenso
+    # Minimo de grupos que deben coincidir para validar un evento consenso
     min_groups_active: int = 1
 
     # Baseline y umbral
-    baseline_window_sec:  float = 20.0
-    k_baseline:           float = 3.0
+    baseline_window_sec: float = 20.0
+    k_baseline: float = 3.0
     k_baseline_per_group: dict[str, float] = field(default_factory=dict)
 
-    # Rango de interés (excluye reposo inicial/final de grabación)
+    # Rango de interes
     t_start: float = 0.0
-    t_end:   float = 380.0
+    t_end: float = 380.0
 
-    # Suavizado del envelope antes de detectar cruces de umbral
+    # Suavizado del envelope 
     smoothing_window_sec: float = 0.5
 
-    # Separación mínima entre eventos consecutivos
+    # Separación minima entre eventos consecutivos
     min_inter_event_sec: float = 10.0
 
     # Tolerancia temporal para asociar eventos de diferentes grupos/canales
@@ -53,11 +51,11 @@ class Config:
     # Gap filling
     gap_fill_sec: float = 1.5
 
-    # Duración válida de un evento por canal (DESPUÉS del gap filling)
+    # Duración valida de un evento por canal 
     min_event_dur_sec: float = 2.5
     max_event_dur_sec: float = 10.0
 
-    # Márgenes al extraer la época
+    # Margenes al extraer la época
     pre_margin_sec:  float = 0.4
     post_margin_sec: float = 0.8
 
@@ -68,25 +66,19 @@ class Config:
 # Utilidades de señal
 def compute_threshold(signal: np.ndarray, time: np.ndarray,
                       baseline_window_sec: float, k: float) -> float:
-    """Umbral adaptativo por canal: mean + k·std sobre ventana de reposo inicial."""
+    # Umbral adaptativo por canal: mean + k·std sobre ventana de reposo inicial
     mask = time <= baseline_window_sec
-    if mask.sum() < 10:
-        raise ValueError(
-            f"Muy pocas muestras en ventana de baseline "
-            f"({mask.sum()} muestras, t ≤ {baseline_window_sec}s). "
-            "Verifica que baseline_window_sec sea menor al inicio del primer gesto."
-        )
     baseline = signal[mask]
     return float(baseline.mean() + k * baseline.std())
 
 
 def smooth_signal(signal: np.ndarray, fs: float, window_sec: float) -> np.ndarray:
-    """Media móvil centrada. Rellena bordes con ffill/bfill."""
+    # Media movil centrada
     w = max(1, int(window_sec * fs))
     return pd.Series(signal).rolling(window=w, center=True).mean().ffill().bfill().values
 
 
-# Detección por canal individual
+# Deteccióo por canal individual
 def detect_channel_events(
     signal: np.ndarray,
     time:   np.ndarray,
