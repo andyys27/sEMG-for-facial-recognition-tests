@@ -13,8 +13,8 @@ from typing import Optional
 @dataclass
 class Config:
     # Rutas
-    csv_path: str = "../Test2/Data/FREEEMG_Processed_Signals.csv"
-    output_path: str = "../Test2"
+    csv_path: str = "../Test1/Data/FREEEMG_Processed_Signals.csv"
+    output_path: str = "../Test1"
 
     # Protocolo
     num_blocks: int = 5
@@ -23,8 +23,8 @@ class Config:
 
     # Grupos musculares
     channel_groups: dict[str, list[str]] = field(default_factory=lambda: {
-        "Grupo_A": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
-        "Grupo_B":  ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
+        "Grupo_A": ["EMG1_Envelope_RMS", "EMG4_Envelope_RMS"],
+        "Grupo_B":  ["EMG2_Envelope_RMS", "EMG3_Envelope_RMS"],
     })
 
     # Minimo de grupos que deben coincidir para validar un evento consenso
@@ -56,44 +56,37 @@ class Config:
     max_event_dur_sec: float = 10.0
 
     # Margenes al extraer la época
-    pre_margin_sec:  float = 0.4
-    post_margin_sec: float = 0.8
+    pre_margin_sec:  float = 1.0
+    post_margin_sec: float = 1.0
 
     # DPI gráficas
     plot_dpi: int = 200
 
 
 # Utilidades de señal
-def compute_threshold(signal: np.ndarray, time: np.ndarray,
-                      baseline_window_sec: float, k: float) -> float:
+def compute_threshold(signal, time, baseline_window_sec, k):
     # Umbral adaptativo por canal: mean + k·std sobre ventana de reposo inicial
     mask = time <= baseline_window_sec
     baseline = signal[mask]
     return float(baseline.mean() + k * baseline.std())
 
 
-def smooth_signal(signal: np.ndarray, fs: float, window_sec: float) -> np.ndarray:
+def smooth_signal(signal, fs, window_sec):
     # Media movil centrada
     w = max(1, int(window_sec * fs))
     return pd.Series(signal).rolling(window=w, center=True).mean().ffill().bfill().values
 
 
-# Deteccióo por canal individual
-def detect_channel_events(
-    signal: np.ndarray,
-    time:   np.ndarray,
-    threshold: float,
-    fs:     float,
-    cfg:    Config,
-) -> list[dict]:
+# Deteccion por canal individual
+def detect_channel_events(signal, time, threshold, fs, cfg):
     sig_smooth = smooth_signal(signal, fs, cfg.smoothing_window_sec)
-    active     = sig_smooth > threshold
-    roi        = (time >= cfg.t_start) & (time <= cfg.t_end)
+    active = sig_smooth > threshold
+    roi = (time >= cfg.t_start) & (time <= cfg.t_end)   # Region de interes
 
-    # 1. Detectar todos los segmentos activos sin filtro de duración
+    # 1. Detectar todos los segmentos activos sin filtro de duracion
     raw_events = []
-    in_event   = False
-    onset_idx  = None
+    in_event = False
+    onset_idx = None
 
     for i in range(1, len(active)):
         if not roi[i]:
@@ -102,7 +95,7 @@ def detect_channel_events(
                 onset_idx = None
             continue
 
-        rising  = active[i] and not active[i - 1]
+        rising = active[i] and not active[i - 1]
         falling = (not active[i]) and active[i - 1]
 
         if not in_event and rising:
@@ -123,29 +116,29 @@ def detect_channel_events(
     for (on, off) in raw_events[1:]:
         gap = on - merged[-1][1]
         if gap <= gap_samples:
-            merged[-1][1] = off          # extender el evento actual
+            merged[-1][1] = off          # Extender el evento actual
         else:
             merged.append([on, off])
 
-    # 3. Filtro de duración y cálculo de amplitudes 
+    # 3. Filtro de duracion y calculo de amplitudes 
     events = []
     for (on, off) in merged:
         dur = time[off] - time[on]
         if cfg.min_event_dur_sec <= dur <= cfg.max_event_dur_sec:
             seg = signal[on:off + 1]
             events.append({
-                "onset_idx":  on,
+                "onset_idx": on,
                 "offset_idx": off,
-                "onset_t":    float(time[on]),
-                "offset_t":   float(time[off]),
-                "peak_amp":   float(seg.max()),
-                "mean_amp":   float(seg.mean()),
+                "onset_t": float(time[on]),
+                "offset_t": float(time[off]),
+                "peak_amp": float(seg.max()),
+                "mean_amp": float(seg.mean()),
             })
 
     if len(events) <= 1:
         return events
 
-    # 4. Deduplicación por distancia mínima
+    # 4. Deduplicacion por distancia minima
     filtered = [events[0]]
     for ev in events[1:]:
         prev = filtered[-1]
@@ -158,11 +151,8 @@ def detect_channel_events(
 
 
 # Consenso por grupos musculares
-def detect_group_events(
-    per_channel_events: dict[str, list[dict]],
-    cfg: Config,
-) -> dict[str, list[dict]]:
-    group_events: dict[str, list[dict]] = {}
+def detect_group_events(per_channel_events, cfg):
+    group_events = {}
 
     for group_name, ch_list in cfg.channel_groups.items():
         # Recopilar todos los eventos de los canales del grupo
@@ -178,7 +168,7 @@ def detect_group_events(
 
         # Agrupar eventos solapados del mismo grupo por ventana de tolerancia
         merged = []
-        used   = set()
+        used = set()
 
         for i, (t_i, ch_i, ev_i) in enumerate(all_ev):
             if i in used:
@@ -203,7 +193,7 @@ def detect_group_events(
                 "channels_active": [ch for ch, _ in cluster],
             })
 
-        # Deduplicar por distancia mínima dentro del grupo
+        # Deduplicar por distancia minima dentro del grupo
         merged.sort(key=lambda x: x["onset_t"])
         dedup = [merged[0]]
         for ev in merged[1:]:
@@ -217,10 +207,7 @@ def detect_group_events(
     return group_events
 
 
-def build_consensus_events(
-    group_events: dict[str, list[dict]],
-    cfg: Config,
-) -> list[dict]:
+def build_consensus_events(group_events, cfg):
     group_names = list(group_events.keys())
 
     # Pool de todos los eventos de todos los grupos
@@ -230,7 +217,7 @@ def build_consensus_events(
             pool.append((ev["onset_t"], gname, ev))
     pool.sort(key=lambda x: x[0])
 
-    used      = set()
+    used = set()
     consensus = []
 
     for i, (t_i, g_seed, ev_seed) in enumerate(pool):
@@ -278,34 +265,29 @@ def build_consensus_events(
     return clean
 
 
-# Extracción de épocas
-def extract_epochs(
-    df: pd.DataFrame,
-    time: np.ndarray,
-    consensus_events: list[dict],
-    cfg: Config,
-) -> list[pd.DataFrame]:
+# Extracción de epocas
+def extract_epochs(df, time, consensus_events, cfg):
     emotion_cycle = cfg.emotion_cycle
     epochs = []
 
     for idx, ev in enumerate(consensus_events):
         emotion = emotion_cycle[idx % len(emotion_cycle)]
-        block   = (idx // len(emotion_cycle)) + 1
+        block = (idx // len(emotion_cycle)) + 1
 
         t_start = ev["onset_t"]  - cfg.pre_margin_sec
-        t_end   = ev["offset_t"] + cfg.post_margin_sec
-        mask    = (time >= t_start) & (time <= t_end)
+        t_end = ev["offset_t"] + cfg.post_margin_sec
+        mask = (time >= t_start) & (time <= t_end)
 
         if mask.sum() == 0:
-            print(f"  ⚠ Evento {idx+1} ({emotion} B{block}): sin muestras "
+            print(f"Evento {idx+1} ({emotion} B{block}): sin muestras "
                   f"en [{t_start:.2f}, {t_end:.2f}]s — omitido.")
             continue
 
         sub = df[mask].copy()
-        sub["Block"]           = block
-        sub["Emotion"]         = emotion
-        sub["Epoch_Time"]      = sub["Time_Seconds"].values - time[np.where(mask)[0][0]]
-        sub["N_Groups"]        = ev["n_groups"]
+        sub["Block"] = block
+        sub["Emotion"] = emotion
+        sub["Epoch_Time"] = sub["Time_Seconds"].values - time[np.where(mask)[0][0]]
+        sub["N_Groups"] = ev["n_groups"]
         sub["Active_Channels"] = ", ".join(sorted(set(ev["channels_active"])))
         epochs.append(sub)
 
@@ -313,32 +295,25 @@ def extract_epochs(
 
 
 # Exportación
-def export_csvs(epochs: list[pd.DataFrame], cfg: Config) -> None:
-    """CSV individual por bloque/emoción + total por emoción."""
+def export_csvs(epochs, cfg):
+    # CSV individual por bloque/gesto
     root = Path(cfg.output_path)
     for emo in cfg.emotion_cycle:
         (root / emo).mkdir(parents=True, exist_ok=True)
 
     for sub in epochs:
-        emo   = sub["Emotion"].iloc[0]
+        emo = sub["Emotion"].iloc[0]
         block = int(sub["Block"].iloc[0])
         sub.to_csv(root / emo / f"bloque_{block:02d}.csv", index=False)
 
-    if epochs:
-        df_all = pd.concat(epochs, ignore_index=True)
-        for emo in cfg.emotion_cycle:
-            df_emo = df_all[df_all["Emotion"] == emo]
-            if not df_emo.empty:
-                df_emo.to_csv(root / emo / f"{emo}_Total.csv", index=False)
 
+def export_metrics(consensus_events, cfg):
+    # Reporte de deteccion exportado solo como CSV
+    root = Path(cfg.output_path)
+    outhpath = root/"Active_Channels"
+    
+    outhpath.mkdir(parents=True, exist_ok=True)
 
-def export_metrics(
-    consensus_events: list[dict],
-    thresholds:       dict[str, float],
-    cfg: Config,
-) -> pd.DataFrame:
-    """Reporte de detección exportado solo como CSV."""
-    root          = Path(cfg.output_path)
     emotion_cycle = cfg.emotion_cycle
     rows = []
 
@@ -346,52 +321,49 @@ def export_metrics(
         emo   = emotion_cycle[idx % len(emotion_cycle)]
         block = (idx // len(emotion_cycle)) + 1
         rows.append({
-            "Event_Index":     idx + 1,
-            "Block":           block,
-            "Emotion":         emo,
-            "Onset_s":         round(ev["onset_t"], 4),
-            "Offset_s":        round(ev["offset_t"], 4),
-            "Duration_s":      round(ev["offset_t"] - ev["onset_t"], 4),
-            "N_Groups":        ev["n_groups"],
-            "Groups_Active":   ", ".join(sorted(ev["groups_active"])),
+            "Event_Index": idx + 1,
+            "Block": block,
+            "Emotion": emo,
+            "Onset_s": round(ev["onset_t"], 4),
+            "Offset_s": round(ev["offset_t"], 4),
+            "Duration_s": round(ev["offset_t"] - ev["onset_t"], 4),
+            "N_Groups": ev["n_groups"],
+            "Groups_Active": ", ".join(sorted(ev["groups_active"])),
             "Channels_Active": ", ".join(sorted(set(ev["channels_active"]))),
         })
 
-    # Añadir fila de thresholds al pie como metadatos legibles
+    # Anadir fila de thresholds al pie como metadatos legibles
     df_metrics = pd.DataFrame(rows)
-    df_metrics.to_csv(root / "detection_metrics.csv", index=False)
+    df_metrics.to_csv(outhpath / "detection_metrics.csv", index=False)
 
-    print(f"\n  → detection_metrics.csv   ({len(rows)} eventos)")
+    print(f"\n  -> detection_metrics.csv   ({len(rows)} eventos)")
     return df_metrics
 
 
-# Gráficas
+# Graficas
 EMOTION_COLORS = {
-    "Sonrisa":     "#27ae60",
-    "Disgusto":    "#e74c3c",
-    "Sorprendido": "#2980b9",
-    "Triste":      "#8e44ad",
+    "Sonrisa":"green",
+    "Disgusto":"red",
+    "Sorprendido":"blue",
+    "Triste":"purple",
 }
 
-# Colores por grupo muscular para gráficas individuales
+# Colores por grupo muscular para graficas individuales
 GROUP_COLORS = {
-    "Grupo_A": "#e67e22",
-    "Grupo_B":  "#16a085",
+    "Grupo_A":"orange",
+    "Grupo_B":"teal",
 }
 
 
-def plot_per_channel(
-    df: pd.DataFrame,
-    time: np.ndarray,
-    per_channel_events: dict[str, list[dict]],
-    thresholds: dict[str, float],
-    consensus_events: list[dict],
-    cfg: Config,
-) -> None:
-    root          = Path(cfg.output_path)
+def plot_per_channel(df, time, per_channel_events, thresholds, consensus_events, cfg):
+    root = Path(cfg.output_path)
+    outhpath = root/"Active_Channels"
+    
+    outhpath.mkdir(parents=True, exist_ok=True)
+
     emotion_cycle = cfg.emotion_cycle
 
-    # Mapa canal → grupo para título informativo
+    # Mapa canal
     ch_to_group = {}
     for gname, chs in cfg.channel_groups.items():
         for ch in chs:
@@ -399,21 +371,20 @@ def plot_per_channel(
 
     for ch, evs_raw in per_channel_events.items():
         signal = df[ch].values
-        th     = thresholds[ch]
-        group  = ch_to_group.get(ch, "")
+        th = thresholds[ch]
+        group = ch_to_group.get(ch, "")
 
         fig, ax = plt.subplots(figsize=(20, 4))
-        ax.plot(time, signal, color="#333333", lw=0.6, alpha=0.9, label="Envelope RMS")
-        ax.axhline(th, color="#c0392b", ls="--", lw=1.1, alpha=0.85,
-                   label=f"Umbral = {th:.2e}")
+        ax.plot(time, signal, color="gray", lw=0.6, alpha=0.9, label="Envelope RMS")
+        ax.axhline(th, color="red", ls="--", lw=1.1, alpha=0.85,label=f"Umbral = {th:.2e}")
 
-        # Sombras de épocas consenso
+        # Sombras de epocas consenso
         for idx, ev in enumerate(consensus_events):
-            emo   = emotion_cycle[idx % len(emotion_cycle)]
+            emo = emotion_cycle[idx % len(emotion_cycle)]
             color = EMOTION_COLORS[emo]
             block = (idx // len(emotion_cycle)) + 1
-            t0    = ev["onset_t"]  - cfg.pre_margin_sec
-            t1    = ev["offset_t"] + cfg.post_margin_sec
+            t0 = ev["onset_t"] - cfg.pre_margin_sec
+            t1 = ev["offset_t"] + cfg.post_margin_sec
             ax.axvspan(t0, t1, color=color, alpha=0.12)
             ax.axvspan(ev["onset_t"], ev["offset_t"], color=color, alpha=0.30)
             ypos = signal.max() * 0.88
@@ -425,56 +396,51 @@ def plot_per_channel(
 
         # Marcadores de onset/offset crudos del canal
         for ev_raw in evs_raw:
-            ax.axvline(ev_raw["onset_t"],  color="navy",       lw=0.7, alpha=0.55, ls=":")
+            ax.axvline(ev_raw["onset_t"], color="navy", lw=0.7, alpha=0.55, ls=":")
             ax.axvline(ev_raw["offset_t"], color="darkorange", lw=0.7, alpha=0.55, ls=":")
 
         # Leyenda
-        emo_patches = [mpatches.Patch(color=c, label=e)
-                       for e, c in EMOTION_COLORS.items()]
+        emo_patches = [mpatches.Patch(color=c, label=e) for e, c in EMOTION_COLORS.items()]
         raw_lines = [
-            plt.Line2D([0], [0], color="navy",       ls=":", lw=1, label="Onset canal"),
+            plt.Line2D([0], [0], color="navy", ls=":", lw=1, label="Onset canal"),
             plt.Line2D([0], [0], color="darkorange", ls=":", lw=1, label="Offset canal"),
         ]
-        ax.legend(handles=emo_patches + raw_lines + ax.get_lines()[:2],
-                  loc="upper right", fontsize=7.5, ncol=2)
+        ax.legend(handles=emo_patches + raw_lines + ax.get_lines()[:2], loc="upper right", fontsize=7.5, ncol=2)
 
         ch_label = ch.replace("_Envelope_RMS", "")
-        ax.set_title(f"{ch_label}  [{group}]  — Segmentación por Emociones",
-                     fontsize=11, weight="bold")
+        ax.set_title(f"{ch_label}  [{group}]  — Segmentacion por Gesticulacion", fontsize=11, weight="bold")
         ax.set_xlabel("Tiempo (s)", fontsize=9)
         ax.set_ylabel("Amplitud RMS", fontsize=9)
         ax.set_xlim(time[0], time[-1])
         ax.grid(True, alpha=0.25)
         fig.tight_layout()
 
-        out = root / f"verificacion_{ch_label}.png"
+        out = outhpath / f"verificacion_{ch_label}.png"
         fig.savefig(out, dpi=cfg.plot_dpi, bbox_inches="tight")
         plt.close(fig)
-        print(f"  → verificacion_{ch_label}.png")
+        print(f"  -> verificacion_{ch_label}.png")
 
 
-def plot_comparative(
-    df: pd.DataFrame,
-    time: np.ndarray,
-    thresholds: dict[str, float],
-    consensus_events: list[dict],
-    cfg: Config,
-) -> None:
-    root   = Path(cfg.output_path)
-    # Ordenar canales: primero grupo lateral, luego medial
+def plot_comparative(df, time, thresholds, consensus_events, cfg):
+    root = Path(cfg.output_path)
+    outhpath = root/"Active_Channels"
+    
+    outhpath.mkdir(parents=True, exist_ok=True)
+
+    # Ordenar canales
     ch_order = []
     for chs in cfg.channel_groups.values():
         ch_order.extend(chs)
     # Solo canales que existen en el df
     ch_order = [ch for ch in ch_order if ch in df.columns]
 
-    # Mapa canal → grupo
+    # Mapa canal
     ch_to_group = {}
     for gname, chs in cfg.channel_groups.items():
         for ch in chs:
             ch_to_group[ch] = gname
 
-    n_ch  = len(ch_order)
+    n_ch = len(ch_order)
     emotion_cycle = cfg.emotion_cycle
 
     fig, axes = plt.subplots(n_ch, 1, figsize=(22, 3.8 * n_ch), sharex=True)
@@ -484,22 +450,21 @@ def plot_comparative(
     prev_group = None
     for ax, ch in zip(axes, ch_order):
         signal = df[ch].values
-        th     = thresholds[ch]
-        group  = ch_to_group.get(ch, "")
-        gcolor = GROUP_COLORS.get(group, "#555555")
+        th = thresholds[ch]
+        group = ch_to_group.get(ch, "")
+        gcolor = GROUP_COLORS.get(group, "gray")
 
-        # Separador visual entre grupos (línea horizontal en el eje y=0)
+        # Separador visual entre grupos 
         if group != prev_group and prev_group is not None:
             ax.spines["top"].set_linewidth(2.0)
             ax.spines["top"].set_color(gcolor)
         prev_group = group
 
-        ax.plot(time, signal, color="#3d3d3d", lw=0.55, alpha=0.92)
-        ax.axhline(th, color="#c0392b", ls="--", lw=0.9, alpha=0.8,
-                   label=f"Umbral {th:.2e}")
+        ax.plot(time, signal, color="gray", lw=0.55, alpha=0.92)
+        ax.axhline(th, color="red", ls="--", lw=0.9, alpha=0.8, label=f"Umbral {th:.2e}")
 
         for idx, ev in enumerate(consensus_events):
-            emo   = emotion_cycle[idx % len(emotion_cycle)]
+            emo = emotion_cycle[idx % len(emotion_cycle)]
             color = EMOTION_COLORS[emo]
             ax.axvspan(ev["onset_t"]  - cfg.pre_margin_sec,
                        ev["offset_t"] + cfg.post_margin_sec,
@@ -507,55 +472,48 @@ def plot_comparative(
             ax.axvspan(ev["onset_t"], ev["offset_t"], color=color, alpha=0.28)
 
         ch_label = ch.replace("_Envelope_RMS", "")
-        ax.set_ylabel(f"{ch_label}\n({group})", fontsize=8.5, weight="bold",
-                      color=gcolor)
+        ax.set_ylabel(f"{ch_label}\n({group})", fontsize=8.5, weight="bold",color=gcolor)
         ax.tick_params(axis="y", labelsize=7)
         ax.grid(True, alpha=0.22)
         ax.set_xlim(time[0], time[-1])
 
-        # Mini-leyenda de umbral en cada subplot
+        # Minileyenda de umbral en cada subplot
         ax.legend(loc="upper right", fontsize=7, framealpha=0.6)
 
-    # Leyenda de emociones en el último subplot
-    emo_patches = [mpatches.Patch(color=c, label=e)
-                   for e, c in EMOTION_COLORS.items()]
-    axes[-1].legend(handles=emo_patches, loc="lower right",
-                    fontsize=8.5, framealpha=0.85)
+    # Leyenda de emociones en el ultimo subplot
+    emo_patches = [mpatches.Patch(color=c, label=e) for e, c in EMOTION_COLORS.items()]
+    axes[-1].legend(handles=emo_patches, loc="lower right", fontsize=8.5, framealpha=0.85)
     axes[-1].set_xlabel("Tiempo (s)", fontsize=10)
 
-    fig.suptitle("Segmentación EMG — 4 Canales (Comparativa por Grupo Muscular)",
-                 fontsize=13, weight="bold", y=1.005)
+    fig.suptitle("Segmentación EMG — 4 Canales (Comparativa por Grupo Muscular)", fontsize=13, weight="bold", y=1.005)
     fig.tight_layout()
 
-    out = root / "verificacion_comparativa_4canales.png"
+    out = outhpath / "verificacion_comparativa_4canales.png"
     fig.savefig(out, dpi=cfg.plot_dpi, bbox_inches="tight")
     plt.close(fig)
-    print(f"  → verificacion_comparativa_4canales.png")
+    print(f"  -> verificacion_comparativa_4canales.png")
 
 
-def plot_group_summary(
-    group_events:     dict[str, list[dict]],
-    consensus_events: list[dict],
-    time:             np.ndarray,
-    df:               pd.DataFrame,
-    cfg:              Config,
-) -> None:
-    root          = Path(cfg.output_path)
+def plot_group_summary(group_events, consensus_events, time, df, cfg):
+    root = Path(cfg.output_path)
+    outhpath = root/"Active_Channels"
+    
+    outhpath.mkdir(parents=True, exist_ok=True)
+
     emotion_cycle = cfg.emotion_cycle
     group_names   = list(cfg.channel_groups.keys())
     n_groups      = len(group_names)
 
-    fig, axes = plt.subplots(n_groups + 1, 1,
-                              figsize=(22, 3.5 * (n_groups + 1)), sharex=True)
+    fig, axes = plt.subplots(n_groups + 1, 1, figsize=(22, 3.5 * (n_groups + 1)), sharex=True)
 
     # Subplots por grupo
     for ax, gname in zip(axes[:n_groups], group_names):
-        gcolor = GROUP_COLORS.get(gname, "#555555")
-        # Señal media del grupo 
+        gcolor = GROUP_COLORS.get(gname, "gray")
+        # Senal media del grupo 
         chs_in_group = [c for c in cfg.channel_groups[gname] if c in df.columns]
         if chs_in_group:
             mean_sig = df[chs_in_group].mean(axis=1).values
-            # Normalizar para visualización conjunta
+            # Normalizar para visualizacion conjunta
             peak = mean_sig.max()
             if peak > 0:
                 mean_sig = mean_sig / peak
@@ -592,33 +550,30 @@ def plot_group_summary(
     ax_c.grid(True, alpha=0.2)
     ax_c.set_xlim(time[0], time[-1])
 
-    fig.suptitle("Diagnóstico de Detección — Eventos por Grupo Muscular → Consenso",
-                 fontsize=12, weight="bold", y=1.002)
+    fig.suptitle("Diagnostico de Deteccion — Eventos por Grupo Muscular", fontsize=12, weight="bold", y=1.002)
     fig.tight_layout()
 
-    out = root / "diagnostico_grupos.png"
+    out = outhpath / "diagnostico_grupos.png"
     fig.savefig(out, dpi=cfg.plot_dpi, bbox_inches="tight")
     plt.close(fig)
-    print(f"  → diagnostico_grupos.png")
+    print(f"  -> diagnostico_grupos.png")
 
 
 # Pipeline principal
-def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
+def epoch_slicing(cfg):
     if cfg is None:
         cfg = Config()
 
-    SEP = "=" * 62
-
-    # 1. Carga
-    df   = pd.read_csv(cfg.csv_path)
+    # 1. Carga de datos
+    df = pd.read_csv(cfg.csv_path)
     time = df["Time_Seconds"].values
-    fs   = 1.0 / np.mean(np.diff(time))
+    fs = 1.0 / np.mean(np.diff(time))
     print(f"      {len(df):,} muestras  |  fs ≈ {fs:.1f} Hz  |  {time[-1]:.1f}s total")
 
     # 2. Umbrales por canal
     all_channels = [ch for chs in cfg.channel_groups.values() for ch in chs]
 
-    # Mapa canal → k efectivo
+    # Mapa canal: k efectivo
     ch_to_k: dict[str, float] = {}
     for gname, chs in cfg.channel_groups.items():
         k = cfg.k_baseline_per_group.get(gname, cfg.k_baseline)
@@ -639,7 +594,7 @@ def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
         thresholds[ch] = th
         print(f"      {ch} (k={k_eff}): {th:.4e}")
 
-    # 3. Detección por canal 
+    # 3. Deteccion por canal 
     print(f"\nDetección de activaciones por canal "
           f"(ROI: {cfg.t_start}–{cfg.t_end}s)")
     per_channel_events: dict[str, list[dict]] = {}
@@ -662,14 +617,14 @@ def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
     status = "✓" if n_detected == total_expected else "⚠"
     print(f"\n      {status} Eventos detectados: {n_detected} / {total_expected} esperados")
 
-    # 5. Extracción y exportación 
-    epochs     = extract_epochs(df, time, consensus_events, cfg)
+    # 5. Extraccion y exportacion 
+    epochs = extract_epochs(df, time, consensus_events, cfg)
     export_csvs(epochs, cfg)
-    df_metrics = export_metrics(consensus_events, thresholds, cfg)
-    print(f"      {len(epochs)} épocas guardadas\n")
+    df_metrics = export_metrics(consensus_events, cfg)
+    print(f"      {len(epochs)} activaciones guardadas\n")
     print(df_metrics.to_string(index=False))
 
-    # 6. Gráficas
+    # 6. Graficas
     plot_per_channel(df, time, per_channel_events, thresholds, consensus_events, cfg)
     plot_comparative(df, time, thresholds, consensus_events, cfg)
     plot_group_summary(group_events, consensus_events, time, df, cfg)
@@ -680,17 +635,17 @@ def epoch_slicing(cfg: Optional[Config] = None) -> pd.DataFrame:
 # Punto de entrada
 if __name__ == "__main__":
     cfg = Config(
-        csv_path    = "../Test2/Data/FREEEMG_Processed_Signals.csv",
-        output_path = "../Test2",
+        csv_path = "../Test1/Data/FREEEMG_Processed_Signals.csv",
+        output_path = "../Test1",
 
         # Protocolo
-        num_blocks  = 10,
+        num_blocks = 3,
 
         # Topología muscular
 
         channel_groups = {
-            "Grupo_A": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
-            "Grupo_B":  ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
+            "Grupo_A": ["EMG1_Envelope_RMS", "EMG4_Envelope_RMS"],
+            "Grupo_B":  ["EMG2_Envelope_RMS", "EMG3_Envelope_RMS"],
         },
         min_groups_active = 1,   # 1 = basta con que un grupo lo detecte
 
@@ -699,23 +654,23 @@ if __name__ == "__main__":
             "Grupo_A": 3.0,   
             "Grupo_B":  4.5,  
         },
-        k_baseline          = 3.0,
+        k_baseline = 10.0,
         baseline_window_sec = 20.0,
 
-        # Rango1 temporal de la grabación útil
-        t_start             = 35.0,
-        t_end               = 700.0,
-        min_inter_event_sec = 10.0,   # Separación mínima entre gestos (s)
-        tolerance_sec       = 3.0,    # Tolerancia para asociar canales entre sí
+        # Rango1 temporal de la grabacion util
+        t_start = 0.0,
+        t_end = 700.0,
+        min_inter_event_sec = 10.0,     # Separacion minima entre gestos (s)
+        tolerance_sec = 3.0,            # Tolerancia para asociar canales entre si
 
         # Forma de onda y gap filling
-        smoothing_window_sec = 0.5,   # Suavizado antes de detectar cruces
-        gap_fill_sec         = 1.5,   # Brecha máxima dentro de un mismo gesto
-        min_event_dur_sec    = 2.5,   # Mínimo post-gap-filling (protocolo ≥ 3s)
-        max_event_dur_sec    = 10.0,  # Máximo (gestos no duran más de esto)
+        smoothing_window_sec = 0.5,     # Suavizado antes de detectar cruces
+        gap_fill_sec = 1.5,             # Brecha maxima dentro de un mismo gesto
+        min_event_dur_sec = 2.5,        # Minimo post-gap-filling 
+        max_event_dur_sec = 10.0,       # Maximo (gestos no duran mas de esto)
 
-        # Márgenes de la época exportada
-        pre_margin_sec  = 0.4,
-        post_margin_sec = 0.8,
+        # Márgenes de la epoca exportada
+        pre_margin_sec  = 1.0,
+        post_margin_sec = 1.0,
     )
     epoch_slicing(cfg)

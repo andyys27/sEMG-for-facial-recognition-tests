@@ -4,7 +4,7 @@ Test1/Data/FREEEMG_Processed_Signals.csv
 Test1/Disgusto/*.csv
 Test1/Sonrisa/*.csv
 Test1/Sorprendido/*.csv
-Test1/Triste/*.csvTest1/Sonrisa/*.csv
+Test1/Triste/*.csv
 
 
 Test2/Data/Baiobit*

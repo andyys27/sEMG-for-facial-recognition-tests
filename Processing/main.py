@@ -4,12 +4,20 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from pipeline import emg_processing_pipeline
 
-# Carga de datos
-data = pd.read_csv("../Test2/Data/FREEEMG_EMG_with_timestamp.csv")
-data = data.fillna(0) 
+# Rutas de Test
+base_path = Path("../Test1")
 
-# Crear carpeta de resultados 
-Path("../Test1/Results").mkdir(parents=True, exist_ok=True)
+# Rutas derivadas
+data_path = base_path / "Data" / "FREEEMG_EMG_with_timestamp.csv"
+analysis_path = base_path / "Analysis"
+output_path = base_path / "Data" / "FREEEMG_Processed_Signals.csv"
+
+# Crear carpeta de analisis
+analysis_path.mkdir(parents=True, exist_ok=True)
+
+# Carga de datos
+data = pd.read_csv(data_path)
+data = data.fillna(0) 
 
 # Convertir timestamp a ms
 timestamps = pd.to_datetime(data.iloc[:, 0])
@@ -35,7 +43,7 @@ for col in emg_channels:
     raw_signal = data[col].values
     sig = emg_processing_pipeline(raw_signal, fs)
 
-    # Diccionario de resultados
+    # Diccionario de analisis
     processed_data_dict[f"{col}_Raw"] = sig["raw"]
     processed_data_dict[f"{col}_Filtered"] = sig["filtered"]
     processed_data_dict[f"{col}_Envelope_RMS"] = sig["envelope"]
@@ -78,9 +86,8 @@ for col in emg_channels:
     axes[2, 1].legend()
     
     plt.tight_layout()
-    plt.savefig(f"../Test2/Results/Análisis_{col}.png")
+    plt.savefig(analysis_path/f"Análisis_{col}.png")
     plt.close()
 
 processed_df = pd.DataFrame(processed_data_dict)
-output_path = "../Test2/Data/FREEEMG_Processed_Signals.csv"
 processed_df.to_csv(output_path, index=False)
