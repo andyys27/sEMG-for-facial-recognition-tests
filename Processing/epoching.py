@@ -31,9 +31,31 @@ class Config:
     min_groups_active: int = 1
 
     # Baseline y umbral
-    baseline_window_sec: float = 20.0
+    baseline_window_sec: float = 20.0          # usado solo si use_rolling_baseline=False
     k_baseline: float = 3.0
     k_baseline_per_group: dict[str, float] = field(default_factory=dict)
+
+    # --- Baseline movil robusto (mediana + MAD) ---
+    use_rolling_baseline: bool = True
+    rolling_baseline_window_sec: float = 20.0   # ventana causal para mediana/MAD
+    rolling_baseline_min_frac: float = 0.25     # min_periods como fraccion de la ventana
+
+    # --- Umbral doble (hysteresis / Schmitt trigger) ---
+    # umbral_offset = baseline + (k_onset * k_offset_ratio) * sigma  (k_offset_ratio < 1)
+    k_offset_ratio: float = 0.6
+    k_offset_ratio_per_group: dict[str, float] = field(default_factory=dict)
+
+    # --- Refinamiento con baseline local pre-countdown ---
+    use_local_baseline_refinement: bool = True
+    countdown_sec: float = 3.0          # duracion del countdown antes del gesto
+    local_baseline_sec: float = 5.0     # ventana de reposo previa al countdown a usar
+    local_refine_search_margin_sec: float = 2.0
+
+    # --- Filtros de forma (energia y factor de cresta) ---
+    use_shape_filters: bool = True
+    energy_ratio_min: float = 3.0       # energia_evento / energia_ruido_baseline minima
+    crest_factor_min: float = 1.05      # rechaza mesetas casi planas (probable ruido)
+    crest_factor_max: float = 8.0       # rechaza picos puntiagudos (probable artefacto)
 
     # Rango de interes
     t_start: float = 0.0
@@ -65,7 +87,7 @@ class Config:
 
 # Utilidades de señal
 def compute_threshold(signal, time, baseline_window_sec, k):
-    # Umbral adaptativo por canal: mean + k·std sobre ventana de reposo inicial
+    # Umbral fijo (legado): mean + k·std sobre ventana de reposo inicial unica
     mask = time <= baseline_window_sec
     baseline = signal[mask]
     return float(baseline.mean() + k * baseline.std())
@@ -77,26 +99,88 @@ def smooth_signal(signal, fs, window_sec):
     return pd.Series(signal).rolling(window=w, center=True).mean().ffill().bfill().values
 
 
+def rolling_baseline_stats(signal, fs, window_sec, min_frac=0.25):
+    """
+    Baseline movil robusto: mediana + MAD (Median Absolute Deviation) en
+    ventana causal (solo pasado). La mediana/MAD toleran hasta ~50% de
+    contaminacion por activaciones dentro de la ventana, por lo que no
+    hace falta excluir manualmente los tramos de gesto: el propio
+    estimador robusto los ignora en la práctica mientras sean minoria
+    dentro de la ventana. Esto resuelve el drift lento (sudor, impedancia,
+    tension residual) sin caer en el circulo de "necesito saber donde
+    esta el reposo para calcular el reposo".
+    """
+    w = max(3, int(window_sec * fs))
+    min_periods = max(3, int(w * min_frac))
+    s = pd.Series(signal)
+
+    med = s.rolling(window=w, min_periods=min_periods).median()
+    mad = (s - med).abs().rolling(window=w, min_periods=min_periods).median()
+
+    med = med.bfill().ffill().values
+    mad = mad.bfill().ffill().values
+
+    sigma = mad * 1.4826  # escala MAD -> equivalente a std bajo normalidad
+    sigma = np.where(sigma < 1e-12, 1e-12, sigma)
+    return med, sigma
+
+
+def hysteresis_thresholds(med, sigma, k_on, k_off_ratio):
+    # Umbral de encendido (estricto) y de apagado (mas laxo) -> evita flicker
+    upper = med + k_on * sigma
+    lower = med + (k_on * k_off_ratio) * sigma
+    return upper, lower
+
+
+def event_shape_metrics(signal_seg, sigma_seg, baseline_med_seg):
+    """
+    Metricas de forma para distinguir un gesto real de un artefacto:
+      - energy_ratio: energia de la señal por encima del baseline, respecto
+        a la energia del ruido de baseline en la misma ventana. Un pico
+        breve que apenas cruza el umbral pero decae enseguida tiene poca
+        energia real y se descarta.
+      - crest_factor: pico / RMS del segmento. Un artefacto puntual
+        (ej. "pop" de electrodo, movimiento de cable) tiene un crest factor
+        muy alto (pico aislado, resto plano). Un gesto real, al ya venir
+        suavizado como envelope, muestra una meseta sostenida con crest
+        factor moderado. Un crest factor casi 1 (demasiado plano) sugiere
+        que en realidad es solo fluctuacion de ruido alrededor del umbral.
+    """
+    excess = np.clip(signal_seg - baseline_med_seg, 0, None)
+    energy_event = float(np.sum(excess ** 2))
+    energy_noise_ref = float(np.sum(sigma_seg ** 2)) + 1e-12
+    energy_ratio = energy_event / energy_noise_ref
+
+    peak = float(signal_seg.max())
+    rms = float(np.sqrt(np.mean(signal_seg ** 2))) + 1e-12
+    crest_factor = peak / rms
+
+    return energy_ratio, crest_factor
+
+
 # Deteccion por canal individual
-def detect_channel_events(signal, time, threshold, fs, cfg):
+def detect_channel_events(signal, time, upper, lower, baseline_med, baseline_sigma, fs, cfg):
+    """
+    upper/lower/baseline_med/baseline_sigma: arrays del mismo largo que signal
+    (umbral doble/hysteresis: se enciende con `upper`, se apaga con `lower`).
+    """
     sig_smooth = smooth_signal(signal, fs, cfg.smoothing_window_sec)
-    active = sig_smooth > threshold
     roi = (time >= cfg.t_start) & (time <= cfg.t_end)   # Region de interes
 
-    # 1. Detectar todos los segmentos activos sin filtro de duracion
+    # 1. Deteccion con hysteresis: enciende al cruzar upper, apaga al cruzar lower
     raw_events = []
     in_event = False
     onset_idx = None
 
-    for i in range(1, len(active)):
+    for i in range(1, len(sig_smooth)):
         if not roi[i]:
             if in_event:
                 in_event  = False
                 onset_idx = None
             continue
 
-        rising = active[i] and not active[i - 1]
-        falling = (not active[i]) and active[i - 1]
+        rising = sig_smooth[i] > upper[i] and sig_smooth[i - 1] <= upper[i - 1]
+        falling = sig_smooth[i] < lower[i] and sig_smooth[i - 1] >= lower[i - 1]
 
         if not in_event and rising:
             in_event  = True
@@ -120,20 +204,35 @@ def detect_channel_events(signal, time, threshold, fs, cfg):
         else:
             merged.append([on, off])
 
-    # 3. Filtro de duracion y calculo de amplitudes 
+    # 3. Filtro de duracion, filtros de forma y calculo de amplitudes
     events = []
     for (on, off) in merged:
         dur = time[off] - time[on]
-        if cfg.min_event_dur_sec <= dur <= cfg.max_event_dur_sec:
-            seg = signal[on:off + 1]
-            events.append({
-                "onset_idx": on,
-                "offset_idx": off,
-                "onset_t": float(time[on]),
-                "offset_t": float(time[off]),
-                "peak_amp": float(seg.max()),
-                "mean_amp": float(seg.mean()),
-            })
+        if not (cfg.min_event_dur_sec <= dur <= cfg.max_event_dur_sec):
+            continue
+
+        seg = signal[on:off + 1]
+
+        if cfg.use_shape_filters:
+            energy_ratio, crest_factor = event_shape_metrics(
+                seg, baseline_sigma[on:off + 1], baseline_med[on:off + 1])
+            ok_energy = energy_ratio >= cfg.energy_ratio_min
+            ok_crest  = cfg.crest_factor_min <= crest_factor <= cfg.crest_factor_max
+            if not (ok_energy and ok_crest):
+                continue
+        else:
+            energy_ratio, crest_factor = None, None
+
+        events.append({
+            "onset_idx": on,
+            "offset_idx": off,
+            "onset_t": float(time[on]),
+            "offset_t": float(time[off]),
+            "peak_amp": float(seg.max()),
+            "mean_amp": float(seg.mean()),
+            "energy_ratio": energy_ratio,
+            "crest_factor": crest_factor,
+        })
 
     if len(events) <= 1:
         return events
@@ -148,6 +247,101 @@ def detect_channel_events(signal, time, threshold, fs, cfg):
             filtered[-1] = ev
 
     return filtered
+
+
+# Refinamiento con baseline local (5s previos al countdown de cada gesto)
+def refine_event_local_baseline(signal, time, fs, onset_t, offset_t, cfg, k_on, k_off_ratio):
+    """
+    Redefine onset/offset de UN evento usando como baseline los
+    `local_baseline_sec` segundos de reposo justo antes del countdown que
+    precede al gesto (se asume que el countdown dura `countdown_sec` y
+    ocurre inmediatamente antes del onset detectado en la pasada global).
+    Esto captura el nivel de reposo especifico de ESE gesto (que puede
+    variar respecto al reposo inicial por fatiga o tension residual de la
+    emocion anterior), en vez de depender de un baseline global o de una
+    ventana movil generica.
+    Si no hay suficientes muestras de reposo disponibles, devuelve el
+    evento original sin modificar.
+    """
+    reposo_end   = onset_t - cfg.countdown_sec
+    reposo_start = reposo_end - cfg.local_baseline_sec
+    mask_baseline = (time >= reposo_start) & (time < reposo_end)
+
+    if mask_baseline.sum() < max(5, int(fs)):
+        return onset_t, offset_t, None, None
+
+    baseline_seg = signal[mask_baseline]
+    med_local = float(np.median(baseline_seg))
+    mad_local = float(np.median(np.abs(baseline_seg - med_local))) * 1.4826
+    mad_local = max(mad_local, 1e-12)
+
+    upper = med_local + k_on * mad_local
+    lower = med_local + (k_on * k_off_ratio) * mad_local
+
+    # Buscar el cruce real en una ventana amplia alrededor del evento original,
+    # arrancando justo al terminar el reposo local (fin de countdown)
+    search_start = reposo_end
+    search_end   = offset_t + cfg.local_refine_search_margin_sec
+    mask_search  = (time >= search_start) & (time <= search_end)
+    idxs = np.where(mask_search)[0]
+    if len(idxs) < 3:
+        return onset_t, offset_t, med_local, mad_local
+
+    sig_smooth = smooth_signal(signal[idxs], fs, cfg.smoothing_window_sec)
+
+    new_onset_t, new_offset_t = onset_t, offset_t
+    in_event = False
+    found_onset = False
+    for k in range(1, len(sig_smooth)):
+        if not in_event and sig_smooth[k] > upper and sig_smooth[k - 1] <= upper:
+            in_event = True
+            found_onset = True
+            new_onset_t = float(time[idxs[k]])
+        elif in_event and sig_smooth[k] < lower:
+            new_offset_t = float(time[idxs[k]])
+            break
+
+    if not found_onset:
+        # No se encontro cruce claro con el baseline local: conservar el original
+        return onset_t, offset_t, med_local, mad_local
+
+    return new_onset_t, new_offset_t, med_local, mad_local
+
+
+def refine_consensus_events(consensus_events, df, time, fs, cfg):
+    """Aplica el refinamiento local a cada evento de consenso, canal por canal
+    dentro de cfg.channel_groups, y combina el resultado (min onset, max offset)
+    para mantener robustez ante que un canal no tenga baseline local valido."""
+    if not cfg.use_local_baseline_refinement:
+        return consensus_events
+
+    all_channels = [ch for chs in cfg.channel_groups.values() for ch in chs]
+    ch_to_k, ch_to_koff = {}, {}
+    for gname, chs in cfg.channel_groups.items():
+        k = cfg.k_baseline_per_group.get(gname, cfg.k_baseline)
+        koff = cfg.k_offset_ratio_per_group.get(gname, cfg.k_offset_ratio)
+        for ch in chs:
+            ch_to_k[ch] = k
+            ch_to_koff[ch] = koff
+
+    refined = []
+    for ev in consensus_events:
+        onsets, offsets = [], []
+        for ch in all_channels:
+            new_on, new_off, _, _ = refine_event_local_baseline(
+                df[ch].values, time, fs,
+                ev["onset_t"], ev["offset_t"], cfg,
+                ch_to_k[ch], ch_to_koff[ch])
+            onsets.append(new_on)
+            offsets.append(new_off)
+
+        ev_ref = dict(ev)
+        ev_ref["onset_t"]  = float(np.min(onsets))
+        ev_ref["offset_t"] = float(np.max(offsets))
+        refined.append(ev_ref)
+
+    refined.sort(key=lambda x: x["onset_t"])
+    return refined
 
 
 # Consenso por grupos musculares
@@ -573,33 +767,68 @@ def epoch_slicing(cfg):
     # 2. Umbrales por canal
     all_channels = [ch for chs in cfg.channel_groups.values() for ch in chs]
 
-    # Mapa canal: k efectivo
+    # Mapa canal: k_onset y k_offset_ratio efectivos
     ch_to_k: dict[str, float] = {}
+    ch_to_koff: dict[str, float] = {}
     for gname, chs in cfg.channel_groups.items():
         k = cfg.k_baseline_per_group.get(gname, cfg.k_baseline)
+        koff = cfg.k_offset_ratio_per_group.get(gname, cfg.k_offset_ratio)
         for ch in chs:
             ch_to_k[ch] = k
+            ch_to_koff[ch] = koff
 
     using_per_group = bool(cfg.k_baseline_per_group)
+    baseline_kind = "movil (mediana+MAD)" if cfg.use_rolling_baseline else "fijo (ventana inicial)"
     if using_per_group:
-        k_summary = ", ".join(f"{g}→k={v}" for g, v in cfg.k_baseline_per_group.items())
-        print(f"\nUmbrales por canal con k por grupo ({k_summary})")
+        k_summary = ", ".join(f"{g}→k_on={v}" for g, v in cfg.k_baseline_per_group.items())
+        print(f"\nUmbrales por canal — baseline {baseline_kind}, k por grupo ({k_summary}), "
+              f"hysteresis k_off_ratio={cfg.k_offset_ratio}")
     else:
-        print(f"\nUmbrales por canal (baseline t ≤ {cfg.baseline_window_sec}s, k = {cfg.k_baseline})")
+        print(f"\nUmbrales por canal — baseline {baseline_kind}, k = {cfg.k_baseline}, "
+              f"hysteresis k_off_ratio={cfg.k_offset_ratio}")
 
-    thresholds: dict[str, float] = {}
+    # Arrays de baseline/umbral por canal (mismo largo que la señal)
+    baseline_med: dict[str, np.ndarray] = {}
+    baseline_sigma: dict[str, np.ndarray] = {}
+    upper_th: dict[str, np.ndarray] = {}
+    lower_th: dict[str, np.ndarray] = {}
+    thresholds: dict[str, float] = {}   # valor representativo (mediana) solo para graficas/logs
+
     for ch in all_channels:
         k_eff = ch_to_k.get(ch, cfg.k_baseline)
-        th = compute_threshold(df[ch].values, time, cfg.baseline_window_sec, k_eff)
-        thresholds[ch] = th
-        print(f"      {ch} (k={k_eff}): {th:.4e}")
+        koff_eff = ch_to_koff.get(ch, cfg.k_offset_ratio)
+        sig = df[ch].values
 
-    # 3. Deteccion por canal 
+        if cfg.use_rolling_baseline:
+            med, sigma = rolling_baseline_stats(
+                sig, fs, cfg.rolling_baseline_window_sec, cfg.rolling_baseline_min_frac)
+        else:
+            th_fixed = compute_threshold(sig, time, cfg.baseline_window_sec, k_eff)
+            mask = time <= cfg.baseline_window_sec
+            med = np.full_like(sig, sig[mask].mean(), dtype=float)
+            sigma = np.full_like(sig, max(sig[mask].std(), 1e-12), dtype=float)
+
+        upper, lower = hysteresis_thresholds(med, sigma, k_eff, koff_eff)
+
+        baseline_med[ch]   = med
+        baseline_sigma[ch] = sigma
+        upper_th[ch]       = upper
+        lower_th[ch]       = lower
+        thresholds[ch]     = float(np.median(upper))  # representativo para plots/logs
+
+        print(f"      {ch} (k_on={k_eff}, k_off_ratio={koff_eff}): "
+              f"umbral_on≈{thresholds[ch]:.4e} (mediana)")
+
+    # 3. Deteccion por canal (umbral doble + filtros de forma)
     print(f"\nDetección de activaciones por canal "
           f"(ROI: {cfg.t_start}–{cfg.t_end}s)")
     per_channel_events: dict[str, list[dict]] = {}
-    for ch in thresholds:
-        evs = detect_channel_events(df[ch].values, time, thresholds[ch], fs, cfg)
+    for ch in all_channels:
+        evs = detect_channel_events(
+            df[ch].values, time,
+            upper_th[ch], lower_th[ch],
+            baseline_med[ch], baseline_sigma[ch],
+            fs, cfg)
         per_channel_events[ch] = evs
         print(f"      {ch}: {len(evs):2d} activaciones")
 
@@ -615,7 +844,13 @@ def epoch_slicing(cfg):
     total_expected = cfg.num_blocks * len(cfg.emotion_cycle)
     n_detected     = len(consensus_events)
     status = "✓" if n_detected == total_expected else "⚠"
-    print(f"\n      {status} Eventos detectados: {n_detected} / {total_expected} esperados")
+    print(f"\n      {status} Eventos detectados (pasada global): {n_detected} / {total_expected} esperados")
+
+    # 4b. Refinamiento con baseline local (5s previos al countdown de cada gesto)
+    if cfg.use_local_baseline_refinement:
+        print(f"\nRefinando onset/offset con baseline local "
+              f"({cfg.local_baseline_sec}s previos al countdown de {cfg.countdown_sec}s)")
+        consensus_events = refine_consensus_events(consensus_events, df, time, fs, cfg)
 
     # 5. Extraccion y exportacion 
     epochs = extract_epochs(df, time, consensus_events, cfg)
@@ -639,7 +874,7 @@ if __name__ == "__main__":
         output_path = "../Test1",
 
         # Protocolo
-        num_blocks = 3,
+        num_blocks = 5,
 
         # Topología muscular
 
@@ -649,13 +884,36 @@ if __name__ == "__main__":
         },
         min_groups_active = 1,   # 1 = basta con que un grupo lo detecte
 
-        # Umbral por grupo muscular
+        # Umbral por grupo muscular (k de encendido)
         k_baseline_per_group = {
             "Grupo_A": 3.0,   
-            "Grupo_B":  4.5,  
+            "Grupo_B": 4.5,  
         },
         k_baseline = 10.0,
-        baseline_window_sec = 20.0,
+
+        # Baseline movil robusto (mediana + MAD), reemplaza el baseline fijo
+        use_rolling_baseline = False,
+        rolling_baseline_window_sec = 20.0,
+        baseline_window_sec = 20.0,     # usado solo si use_rolling_baseline=False
+
+        # Umbral doble / hysteresis: apagado mas laxo que encendido
+        k_offset_ratio = 0.6,
+        k_offset_ratio_per_group = {
+            "Grupo_A": 0.6,
+            "Grupo_B": 0.6,
+        },
+
+        # Refinamiento con baseline local pre-countdown (5s antes del countdown)
+        use_local_baseline_refinement = False,
+        countdown_sec = 3.0,
+        local_baseline_sec = 5.0,
+        local_refine_search_margin_sec = 2.0,
+
+        # Filtros de forma: energia y factor de cresta
+        use_shape_filters = False,
+        energy_ratio_min = 2.0,
+        crest_factor_min = 1.05,
+        crest_factor_max = 5.0,
 
         # Rango1 temporal de la grabacion util
         t_start = 0.0,
