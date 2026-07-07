@@ -669,7 +669,7 @@ if __name__ == "__main__":
         min_event_dur_sec = 2.5,        # Minimo post-gap-filling 
         max_event_dur_sec = 10.0,       # Maximo (gestos no duran mas de esto)
 
-        # Márgenes de la epoca exportada
+        # Margenes de la epoca exportada
         pre_margin_sec  = 1.0,
         post_margin_sec = 1.0,
     )
