@@ -1,0 +1,60 @@
+{
+    "csv_path": "/home/andys27/Developer/GitHub/sEMG-for-facial-recognition-tests/Test1/Data/FREEEMG_Processed_Signals.csv",
+    "output_path": "/home/andys27/Developer/GitHub/sEMG-for-facial-recognition-tests/Test1",
+    "num_blocks": 10,
+    "emotion_cycle": [
+        "Sonrisa",
+        "Disgusto",
+        "Sorprendido",
+        "Triste"
+    ],
+    "channel_groups": {
+        "Grupo_A": [
+            "EMG2_Envelope_RMS",
+            "EMG3_Envelope_RMS"
+        ],
+        "Grupo_B": [
+            "EMG1_Envelope_RMS",
+            "EMG4_Envelope_RMS"
+        ]
+    },
+    "min_groups_active": 1,
+    "baseline_window_sec": 20.0,
+    "k_baseline": 10.0,
+    "k_baseline_per_group": {
+        "Grupo_A": 4.5,
+        "Grupo_B": 3.0
+    },
+    "use_rolling_baseline": false,
+    "rolling_baseline_window_sec": 20.0,
+    "rolling_baseline_min_frac": 0.25,
+    "k_offset_ratio": 0.58,
+    "k_offset_ratio_per_group": {
+        "Grupo_A": 0.58,
+        "Grupo_B": 0.58
+    },
+    "use_local_baseline_refinement": false,
+    "countdown_sec": 3.0,
+    "local_baseline_sec": 5.0,
+    "local_refine_search_margin_sec": 2.0,
+    "use_shape_filters": false,
+    "energy_ratio_min": 3.0,
+    "crest_factor_min": 1.05,
+    "crest_factor_max": 8.0,
+    "t_start": 0.0,
+    "t_end": 700.0,
+    "smoothing_window_sec": 0.5,
+    "min_inter_event_sec": 10.0,
+    "tolerance_sec": 3.0,
+    "gap_fill_sec": 2.5,
+    "min_event_dur_sec": 1.5,
+    "max_event_dur_sec": 11.1,
+    "pre_margin_sec": 1.0,
+    "post_margin_sec": 1.0,
+    "plot_dpi": 200,
+    "debug_rejections": true,
+    "export_labeled_full_csv": true,
+    "labeled_csv_name": "Data/processed_labeled.csv",
+    "reposo_label": "Reposo",
+    "countdown_label_prefix": "Countdown_"
+}
