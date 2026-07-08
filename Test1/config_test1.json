@@ -28,10 +28,10 @@
     "use_rolling_baseline": false,
     "rolling_baseline_window_sec": 20.0,
     "rolling_baseline_min_frac": 0.25,
-    "k_offset_ratio": 0.58,
+    "k_offset_ratio": 0.6,
     "k_offset_ratio_per_group": {
-        "Grupo_A": 0.58,
-        "Grupo_B": 0.58
+        "Grupo_A": 0.6,
+        "Grupo_B": 0.6
     },
     "use_local_baseline_refinement": false,
     "countdown_sec": 3.0,
@@ -46,8 +46,8 @@
     "smoothing_window_sec": 0.5,
     "min_inter_event_sec": 10.0,
     "tolerance_sec": 3.0,
-    "gap_fill_sec": 2.5,
-    "min_event_dur_sec": 1.5,
+    "gap_fill_sec": 1.5,
+    "min_event_dur_sec": 2.5,
     "max_event_dur_sec": 11.1,
     "pre_margin_sec": 1.0,
     "post_margin_sec": 1.0,

@@ -40,10 +40,10 @@ if __name__ == "__main__":
         baseline_window_sec=20.0,           # usado solo si use_rolling_baseline=False
 
         # Umbral doble / hysteresis: apagado mas laxo que encendido
-        k_offset_ratio=0.58,
+        k_offset_ratio=0.6,
         k_offset_ratio_per_group={
-            "Grupo_A": 0.58,
-            "Grupo_B": 0.58,
+            "Grupo_A": 0.6,
+            "Grupo_B": 0.6,
         },
 
         # Refinamiento con baseline local pre-countdown (5s antes del countdown)
@@ -66,8 +66,8 @@ if __name__ == "__main__":
 
         # Forma de onda y gap filling
         smoothing_window_sec=0.5,     # Suavizado antes de detectar cruces
-        gap_fill_sec=2.5,             # Brecha maxima dentro de un mismo gesto
-        min_event_dur_sec=1.5,        # Minimo post-gap-filling
+        gap_fill_sec=1.5,             # Brecha maxima dentro de un mismo gesto
+        min_event_dur_sec=2.5,        # Minimo post-gap-filling
         max_event_dur_sec=11.1,       # Maximo (gestos no duran mas de esto)
 
         # Margenes de la epoca exportada
