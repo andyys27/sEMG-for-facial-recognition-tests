@@ -1,18 +1,24 @@
 """
 Punto de entrada: Se define la configuracion de la corrida y se invoca 
 la funcion principal de slicing de epocas
+
+python -m main.run_segmentation
 """
 
-from emg_segmentation import epoch_slicing
-from main.emg_segmentation import config
+from pathlib import Path
+from main.emg_segmentation import epoch_slicing
+from main.emg_segmentation import Config
+
+# Raiz del proyecto
+root = Path(__file__).resolve().parent.parent
 
 if __name__ == "__main__":
-    cfg = config(
-        csv_path="../Test1/Data/FREEEMG_Processed_Signals.csv",
-        output_path="../Test1",
+    cfg = Config(
+        csv_path = str(root / "Test1/Data/FREEEMG_Processed_Signals.csv"),
+        output_path = str(root / "Test1"),
 
         # Protocolo
-        num_blocks=3,
+        num_blocks=5,
 
         # Topologia muscular
         channel_groups={
@@ -29,7 +35,7 @@ if __name__ == "__main__":
         k_baseline=10.0,
 
         # Baseline movil robusto (mediana + MAD), reemplaza el baseline fijo
-        use_rolling_baseline=True,
+        use_rolling_baseline=False,
         rolling_baseline_window_sec=20.0,
         baseline_window_sec=20.0,     # usado solo si use_rolling_baseline=False
 
@@ -41,13 +47,13 @@ if __name__ == "__main__":
         },
 
         # Refinamiento con baseline local pre-countdown (5s antes del countdown)
-        use_local_baseline_refinement=True,
+        use_local_baseline_refinement=False,
         countdown_sec=3.0,
         local_baseline_sec=5.0,
         local_refine_search_margin_sec=2.0,
 
         # Filtros de forma: energia y factor de cresta
-        use_shape_filters=True,
+        use_shape_filters=False,
         energy_ratio_min=3.0,
         crest_factor_min=1.05,
         crest_factor_max=8.0,
@@ -70,6 +76,6 @@ if __name__ == "__main__":
 
         # CSV completo etiquetado (Reposo / Countdown_Emocion / <Emocion>)
         export_labeled_full_csv=True,
-        labeled_csv_name="processed_labeled.csv",
+        labeled_csv_name="Data/processed_labeled.csv",
     )
     epoch_slicing(cfg)

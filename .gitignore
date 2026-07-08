@@ -1,16 +1,14 @@
-Test1/Data/Baiobit*
-Test1/Data/FREEEMG_EMG_no_timestamp.csv
-Test1/Data/FREEEMG_Processed_Signals.csv
-Test1/Disgusto/*.csv
-Test1/Sonrisa/*.csv
-Test1/Sorprendido/*.csv
-Test1/Triste/*.csv
+# ARCHIVOS DE TEXTO Y SENALES CRUDAS
+Test*/Data/Baiobit*
+Test*/Data/FREEEMG_EMG_no_timestamp.csv
+Test*/Data/FREEEMG_Processed_Signals.csv
+Test*/Data/processed_labeled.csv
 
+# ENTORNO DE METRICAS
+Test*/Active_Channels/detection_metrics.csv
 
-Test2/Data/Baiobit*
-Test2/Data/FREEEMG_EMG_no_timestamp.csv
-Test2/Data/FREEEMG_Processed_Signals.csv
-Test2/Disgusto/*.csv
-Test2/Sonrisa/*.csv
-Test2/Sorprendido/*.csv
-Test2/Triste/*.csvTest1/Sonrisa/*.csv
+# EPOCAS RE CORTADAS POR EMOCION
+Test*/Sonrisa/*.csv
+Test*/Disgusto/*.csv
+Test*/Sorprendido/*.csv
+Test*/Triste/*.csv
