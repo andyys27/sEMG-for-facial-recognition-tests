@@ -40,13 +40,13 @@ class Config:
     k_offset_ratio: float = 0.6
     k_offset_ratio_per_group: dict[str, float] = field(default_factory=dict)
 
-    # --- Refinamiento con baseline local pre-countdown ---
+    # Refinamiento con baseline local pre-countdown 
     use_local_baseline_refinement: bool = True
     countdown_sec: float = 3.0          # duracion del countdown antes del gesto
     local_baseline_sec: float = 5.0     # ventana de reposo previa al countdown a usar
     local_refine_search_margin_sec: float = 2.0
 
-    # --- Filtros de forma (energia y factor de cresta) ---
+    # Filtros de forma (energia y factor de cresta) 
     use_shape_filters: bool = True
     energy_ratio_min: float = 3.0       # energia_evento / energia_ruido_baseline minima
     crest_factor_min: float = 1.05      # rechaza mesetas casi planas (probable ruido)
@@ -81,6 +81,6 @@ class Config:
 
     # Etiquetado del CSV completo (processed + label) 
     export_labeled_full_csv: bool = True
-    labeled_csv_name: str = "processed_labeled.csv"
+    labeled_csv_name: str = "Data/processed_labeled.csv"
     reposo_label: str = "Reposo"
     countdown_label_prefix: str = "Countdown_"
