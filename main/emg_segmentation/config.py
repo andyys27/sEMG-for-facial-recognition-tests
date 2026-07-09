@@ -90,6 +90,8 @@ class Config:
     reposo_label: str = "Reposo"
     countdown_label_prefix: str = "Countdown_"
 
+    save_config_json: bool = True
+
     def save(self, filepath: str):
         path = Path(filepath).resolve()
         

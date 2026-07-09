@@ -56,5 +56,6 @@
     "export_labeled_full_csv": true,
     "labeled_csv_name": "Data/processed_labeled.csv",
     "reposo_label": "Reposo",
-    "countdown_label_prefix": "Countdown_"
+    "countdown_label_prefix": "Countdown_",
+    "save_config_json": true
 }

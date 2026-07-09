@@ -78,7 +78,9 @@ if __name__ == "__main__":
         export_labeled_full_csv=True,
         labeled_csv_name="Data/processed_labeled.csv",
 
-        debug_rejections=True
+        debug_rejections=True,
+        save_config_json=False,
     )
     epoch_slicing(cfg)
-    cfg.save("Test1/config_test1.json")
+    if cfg.save_config_json:
+        cfg.save("Test1/config_test1.json")
