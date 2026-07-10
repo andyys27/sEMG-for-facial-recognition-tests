@@ -30,7 +30,7 @@ if __name__ == "__main__":
         # Umbral por grupo muscular (k de encendido)
         k_baseline_per_group={
             "Grupo_A": 4.5,
-            "Grupo_B": 5.0,
+            "Grupo_B": 5.5,
         },
         k_baseline=10.0,
 
