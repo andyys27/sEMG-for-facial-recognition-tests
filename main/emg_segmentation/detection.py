@@ -11,6 +11,40 @@ import numpy as np
 from .signal_utils import smooth_signal, event_shape_metrics
 
 
+# Helper: fusion/dedup por descanso real entre eventos
+def _merge_two_events(a, b):
+    # Combina dos eventos que se solapan, conservando el rango temporal y uniendo canales
+    base = a if a.get("peak_amp", 0) >= b.get("peak_amp", 0) else b
+    merged = dict(base)
+    merged["onset_t"] = min(a["onset_t"], b["onset_t"])
+    merged["offset_t"] = max(a["offset_t"], b["offset_t"])
+    if "peak_amp" in a and "peak_amp" in b:
+        merged["peak_amp"] = max(a["peak_amp"], b["peak_amp"])
+    for key in ("channels_active", "groups_active"):
+        if key in a or key in b:
+            vals = list(a.get(key, [])) + list(b.get(key, []))
+            merged[key] = sorted(set(vals))
+    if "groups_active" in merged:
+        merged["n_groups"] = len(merged["groups_active"])
+    return merged
+ 
+ 
+def dedupe_by_gap(events, min_gap_sec):
+    # Fusiona eventos consecutivos usando la separacion REAL de reposo
+    if not events:
+        return events
+    events = sorted(events, key=lambda e: e["onset_t"])
+    clean = [dict(events[0])]
+    for ev in events[1:]:
+        prev = clean[-1]
+        gap = ev["onset_t"] - prev["offset_t"]
+        if gap < min_gap_sec:
+            clean[-1] = _merge_two_events(prev, ev)
+        else:
+            clean.append(dict(ev))
+    return clean
+ 
+ 
 # 1. Deteccion por canal individual
 def detect_channel_events(signal, time, upper, lower, baseline_med, baseline_sigma, fs, cfg, channel_name=None):
     tag = f"[{channel_name}] " if channel_name else ""
@@ -54,17 +88,33 @@ def detect_channel_events(signal, time, upper, lower, baseline_med, baseline_sig
         else:
             merged.append([on, off])
  
-    # 3. Filtro de duracion, filtros de forma y calculo de amplitudes
+    # 3. Filtro de duracion (con excepcion de "corto pero intenso"), filtros
+    #    de forma y calculo de amplitudes
     events = []
     for (on, off) in merged:
         dur = time[off] - time[on]
-        if not (cfg.min_event_dur_sec <= dur <= cfg.max_event_dur_sec):
+        accept_duration = cfg.min_event_dur_sec <= dur <= cfg.max_event_dur_sec
+ 
+        intense_override = False
+        intense_ratio = None
+        if not accept_duration and cfg.allow_short_intense_events and dur <= cfg.max_event_dur_sec:
+            if cfg.min_event_dur_sec_intense <= dur < cfg.min_event_dur_sec:
+                peak_local = float(signal[on:off + 1].max())
+                intense_ratio = peak_local / max(upper[on], 1e-12)
+                if intense_ratio >= cfg.intense_peak_ratio:
+                    intense_override = True
+ 
+        if not (accept_duration or intense_override):
             if cfg.debug_rejections:
                 razon = "duracion_excede_max" if dur > cfg.max_event_dur_sec else "duracion_bajo_min"
                 print(f"      {tag}descartado t=[{time[on]:.2f},{time[off]:.2f}]s "
                       f"dur={dur:.2f}s razon={razon} "
                       f"(limites: {cfg.min_event_dur_sec}-{cfg.max_event_dur_sec}s)")
             continue
+ 
+        if intense_override and cfg.debug_rejections:
+            print(f"      {tag}rescatado por intensidad t=[{time[on]:.2f},{time[off]:.2f}]s "
+                  f"dur={dur:.2f}s pico/umbral={intense_ratio:.1f}x (min {cfg.intense_peak_ratio}x)")
  
         seg = signal[on:off + 1]
  
@@ -94,22 +144,10 @@ def detect_channel_events(signal, time, upper, lower, baseline_med, baseline_sig
             "crest_factor": crest_factor,
         })
  
-    if len(events) <= 1:
-        return events
+    # 4. Deduplicacion por descanso real (offset_anterior -> onset_siguiente)
+    return dedupe_by_gap(events, cfg.min_inter_event_sec)
  
-    # 4. Deduplicacion por distancia minima
-    filtered = [events[0]]
-    for ev in events[1:]:
-        prev = filtered[-1]
-        if ev["onset_t"] - prev["onset_t"] >= cfg.min_inter_event_sec:
-            filtered.append(ev)
-        elif ev["peak_amp"] > prev["peak_amp"]:
-            filtered[-1] = ev
- 
-    return filtered
 
-
-# 2. Consenso por grupos musculares
 def detect_group_events(per_channel_events, cfg):
     group_events = {}
  
@@ -152,20 +190,14 @@ def detect_group_events(per_channel_events, cfg):
                 "channels_active": [ch for ch, _ in cluster],
             })
  
-        # Deduplicar por distancia minima dentro del grupo
-        merged.sort(key=lambda x: x["onset_t"])
-        dedup = [merged[0]]
-        for ev in merged[1:]:
-            if ev["onset_t"] - dedup[-1]["onset_t"] >= cfg.min_inter_event_sec:
-                dedup.append(ev)
-            elif ev["peak_amp"] > dedup[-1]["peak_amp"]:
-                dedup[-1] = ev
+        # Deduplicar por descanso real dentro del grupo
+        dedup = dedupe_by_gap(merged, cfg.min_inter_event_sec)
  
         group_events[group_name] = dedup
  
     return group_events
-
-
+ 
+ 
 def build_consensus_events(group_events, cfg):
     group_names = list(group_events.keys())
  
@@ -211,28 +243,24 @@ def build_consensus_events(group_events, cfg):
             ],
         })
  
-    # Ordenar y deduplicar solapamientos residuales
-    consensus.sort(key=lambda x: x["onset_t"])
+    # Ordenar y depurar solapamientos/eventos pegados por descanso real
     if not consensus:
         return []
  
-    clean = [consensus[0]]
-    for ev in consensus[1:]:
-        if ev["onset_t"] - clean[-1]["onset_t"] >= cfg.min_inter_event_sec:
-            clean.append(ev)
+    return dedupe_by_gap(consensus, cfg.min_inter_event_sec)
  
-    return clean
-
-
-# 3. Refinamiento con baseline local (5s previos al countdown de cada gesto)
-def refine_event_local_baseline(signal, time, fs, onset_t, offset_t, cfg, k_on, k_off_ratio):    # Redefine onset/offset de un evento usando como baseline los segundos de reposo  antes 
+ 
+# 3. Refinamiento con baseline local 
+def refine_event_local_baseline(signal, time, fs, onset_t, offset_t, cfg, k_on, k_off_ratio):
+    # Redefine onset/offset de un evento usando como baseline los segundos de reposo  antes 
     # del countdown que precede al gesto 
     # Captura el nivel de reposo especifico del gesto, que puede variar respecto al reposo 
     # inicial por fatiga o tension residual de la emocion anterior
-    
+
     reposo_end = onset_t - cfg.countdown_sec
-    reposo_start = reposo_end - cfg.local_baseline_sec
-    mask_baseline = (time >= reposo_start) & (time < reposo_end)
+    reposo_calc_end = reposo_end - cfg.local_refine_safety_margin_sec
+    reposo_start = reposo_calc_end - cfg.local_baseline_sec
+    mask_baseline = (time >= reposo_start) & (time < reposo_calc_end)
  
     if mask_baseline.sum() < max(5, int(fs)):
         return onset_t, offset_t, None, None
@@ -245,9 +273,8 @@ def refine_event_local_baseline(signal, time, fs, onset_t, offset_t, cfg, k_on, 
     upper = med_local + k_on * mad_local
     lower = med_local + (k_on * k_off_ratio) * mad_local
  
-    # Buscar el cruce real en una ventana amplia alrededor del evento original,
-    # arrancando justo al terminar el reposo local (fin de countdown)
-    search_start = reposo_end
+    # Buscar el cruce real en una ventana amplia alrededor del evento original
+    search_start = reposo_end - cfg.local_refine_search_pre_buffer_sec
     search_end = offset_t + cfg.local_refine_search_margin_sec
     mask_search = (time >= search_start) & (time <= search_end)
     idxs = np.where(mask_search)[0]
@@ -273,11 +300,12 @@ def refine_event_local_baseline(signal, time, fs, onset_t, offset_t, cfg, k_on, 
         return onset_t, offset_t, med_local, mad_local
  
     return new_onset_t, new_offset_t, med_local, mad_local
-
-
+ 
+ 
 def refine_consensus_events(consensus_events, df, time, fs, cfg):
     # Aplica el refinamiento local a cada evento de consenso, canal por canal y 
     # combina el resultado
+    
     if not cfg.use_local_baseline_refinement:
         return consensus_events
  
@@ -294,17 +322,34 @@ def refine_consensus_events(consensus_events, df, time, fs, cfg):
     for ev in consensus_events:
         onsets, offsets = [], []
         for ch in all_channels:
-            new_on, new_off, _, _ = refine_event_local_baseline(
+            new_on, new_off, med_local, mad_local = refine_event_local_baseline(
                 df[ch].values, time, fs,
                 ev["onset_t"], ev["offset_t"], cfg,
                 ch_to_k[ch], ch_to_koff[ch])
             onsets.append(new_on)
             offsets.append(new_off)
  
+            if cfg.debug_rejections:
+                moved_on = abs(new_on - ev["onset_t"]) > 0.05
+                moved_off = abs(new_off - ev["offset_t"]) > 0.05
+                if med_local is None:
+                    print(f"      [{ch}] refinamiento local: sin reposo suficiente "
+                          f"antes de t={ev['onset_t']:.2f}s — se conserva original")
+                elif moved_on or moved_off:
+                    print(f"      [{ch}] refinado: onset {ev['onset_t']:.2f}->{new_on:.2f}s "
+                          f"offset {ev['offset_t']:.2f}->{new_off:.2f}s "
+                          f"(baseline_local={med_local:.3e}, MAD={mad_local:.3e})")
+ 
         ev_ref = dict(ev)
         ev_ref["onset_t"] = float(np.min(onsets))
         ev_ref["offset_t"] = float(np.max(offsets))
+        if cfg.debug_rejections and (abs(ev_ref["onset_t"] - ev["onset_t"]) > 0.05
+                                      or abs(ev_ref["offset_t"] - ev["offset_t"]) > 0.05):
+            print(f"      >> Evento consenso refinado: "
+                  f"[{ev['onset_t']:.2f},{ev['offset_t']:.2f}]s -> "
+                  f"[{ev_ref['onset_t']:.2f},{ev_ref['offset_t']:.2f}]s")
         refined.append(ev_ref)
  
     refined.sort(key=lambda x: x["onset_t"])
     return refined
+ 
