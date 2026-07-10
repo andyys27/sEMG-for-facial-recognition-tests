@@ -40,17 +40,21 @@ if __name__ == "__main__":
         baseline_window_sec=20.0,           # usado solo si use_rolling_baseline=False
 
         # Umbral doble / hysteresis: apagado mas laxo que encendido
-        k_offset_ratio=0.6,
+        k_offset_ratio=0.8,
         k_offset_ratio_per_group={
-            "Grupo_A": 0.6,
-            "Grupo_B": 0.6,
+            "Grupo_A": 0.8,
+            "Grupo_B": 0.2,
         },
 
         # Refinamiento con baseline local pre-countdown (5s antes del countdown)
         use_local_baseline_refinement=True,
         countdown_sec=3.0,                      # duracion del countdown antes del gesto
-        local_baseline_sec=5.0,                 # ventana de reposo previa al countdown a usar
-        local_refine_search_margin_sec=2.0,
+        local_baseline_sec=8.0,                 # ventana de reposo previa al countdown a usar
+        local_refine_search_margin_sec=5.0,
+
+        # Separa donde se muestrea el reposo de donde se empieza a buscar el cruce real
+        local_refine_safety_margin_sec=1.5,
+        local_refine_search_pre_buffer_sec=6.0,
 
         # Filtros de forma: energia y factor de cresta
         use_shape_filters=False,
@@ -60,13 +64,13 @@ if __name__ == "__main__":
 
         # Rango temporal de la grabacion util
         t_start=0.0,
-        t_end=400.0,
+        t_end=330.0,
         min_inter_event_sec=10.0,       # Separacion minima entre gestos (s)
         tolerance_sec=3.0,              # Tolerancia para asociar canales entre si
 
         # Forma de onda y gap filling
         smoothing_window_sec=0.5,       # Suavizado antes de detectar cruces
-        gap_fill_sec=1.5,               # Brecha maxima dentro de un mismo gesto
+        gap_fill_sec=3.0,               # Brecha maxima dentro de un mismo gesto
         min_event_dur_sec=2.0,          # Minimo post-gap-filling
         max_event_dur_sec=22.0,         # Maximo (gestos no duran mas de esto)
 
