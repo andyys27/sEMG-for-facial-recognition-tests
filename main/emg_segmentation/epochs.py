@@ -1,8 +1,7 @@
 """
 Extraccion de epocas individuales por gesto y exportacion a CSV
-(un archivo por bloque/emocion, mas el reporte de metricas de deteccion).
+(un archivo por bloque/emocion, mas el reporte de metricas de deteccion)
 """
-
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -56,24 +55,55 @@ def export_metrics(consensus_events, cfg):
 
     emotion_cycle = cfg.emotion_cycle
     rows = []
+    warnings = []
 
+    prev_offset = None
     for idx, ev in enumerate(consensus_events):
         emo = emotion_cycle[idx % len(emotion_cycle)]
         block = (idx // len(emotion_cycle)) + 1
+        dur = ev["offset_t"] - ev["onset_t"]
+
+        gap_prev = None if prev_offset is None else round(ev["onset_t"] - prev_offset, 4)
+        gap_flag = ""
+        if gap_prev is not None:
+            if gap_prev > cfg.expected_gap_max_sec:
+                gap_flag = "HUECO_LARGO"
+                warnings.append(f"  ⚠ Evento {idx+1} ({emo} B{block}): hueco de {gap_prev:.1f}s "
+                                 f"antes de este evento (esperado < {cfg.expected_gap_max_sec}s) "
+                                 f"— posible gesto no detectado en [{prev_offset:.1f},{ev['onset_t']:.1f}]s")
+            elif gap_prev < cfg.expected_gap_min_sec:
+                gap_flag = "HUECO_CORTO"
+                warnings.append(f"  ⚠ Evento {idx+1} ({emo} B{block}): hueco de solo {gap_prev:.1f}s "
+                                 f"antes de este evento (esperado > {cfg.expected_gap_min_sec}s) "
+                                 f"— posible fragmentacion de un mismo gesto")
+
         rows.append({
             "Event_Index": idx + 1,
             "Block": block,
             "Emotion": emo,
             "Onset_s": round(ev["onset_t"], 4),
             "Offset_s": round(ev["offset_t"], 4),
-            "Duration_s": round(ev["offset_t"] - ev["onset_t"], 4),
+            "Duration_s": round(dur, 4),
+            "Gap_From_Prev_s": gap_prev,
+            "Gap_Flag": gap_flag,
             "N_Groups": ev["n_groups"],
             "Groups_Active": ", ".join(sorted(ev["groups_active"])),
             "Channels_Active": ", ".join(sorted(set(ev["channels_active"]))),
         })
+        prev_offset = ev["offset_t"]
 
     df_metrics = pd.DataFrame(rows)
     df_metrics.to_csv(outhpath / "detection_metrics.csv", index=False)
 
     print(f"\n  -> detection_metrics.csv   ({len(rows)} eventos)")
+
+    if warnings:
+        print(f"\n  ⚠ {len(warnings)} hueco(s) fuera de lo esperado "
+              f"(rango normal: {cfg.expected_gap_min_sec}-{cfg.expected_gap_max_sec}s):")
+        for w in warnings:
+            print(w)
+    else:
+        print(f"\n  ✓ Todos los huecos entre eventos estan dentro de lo esperado "
+              f"({cfg.expected_gap_min_sec}-{cfg.expected_gap_max_sec}s)")
+
     return df_metrics

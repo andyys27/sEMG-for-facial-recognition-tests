@@ -48,6 +48,10 @@ class Config:
     local_baseline_sec: float = 5.0     # ventana de reposo previa al countdown a usar
     local_refine_search_margin_sec: float = 2.0
  
+    # Separa donde se muestrea el reposo de donde se empieza a buscar el cruce real
+    local_refine_safety_margin_sec: float = 1.5
+    local_refine_search_pre_buffer_sec: float = 2.0
+
     # Filtros de forma (energia y factor de cresta)
     use_shape_filters: bool = True
     energy_ratio_min: float = 3.0       # energia_evento / energia_ruido_baseline minima
@@ -73,6 +77,11 @@ class Config:
     # Duracion valida de un evento por canal
     min_event_dur_sec: float = 2.5
     max_event_dur_sec: float = 10.0
+
+    #Excepcion: eventos cortos pero muy intensos
+    allow_short_intense_events: bool = True
+    min_event_dur_sec_intense: float = 1.0   # piso absoluto, por debajo de esto nunca se acepta
+    intense_peak_ratio: float = 4.0          # pico debe superar el umbral_on por este factor
  
     # Margenes al extraer la epoca
     pre_margin_sec: float = 1.0
@@ -83,6 +92,10 @@ class Config:
  
     # Debug: loguear eventos candidatos rechazados 
     debug_rejections: bool = False
+
+    # Sanity check: marcar huecos entre eventos fuera de lo esperado 
+    expected_gap_min_sec: float = 3.0
+    expected_gap_max_sec: float = 25.0
  
     # Etiquetado del CSV completo (processed + label) 
     export_labeled_full_csv: bool = True
