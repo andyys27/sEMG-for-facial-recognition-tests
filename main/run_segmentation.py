@@ -30,7 +30,7 @@ if __name__ == "__main__":
         # Umbral por grupo muscular (k de encendido)
         k_baseline_per_group={
             "Grupo_A": 4.5,
-            "Grupo_B": 5.5,
+            "Grupo_B": 5.0,
         },
         k_baseline=10.0,
 
@@ -40,9 +40,9 @@ if __name__ == "__main__":
         baseline_window_sec=20.0,           # usado solo si use_rolling_baseline=False
 
         # Umbral doble / hysteresis: apagado mas laxo que encendido
-        k_offset_ratio=0.8,
+        k_offset_ratio=0.6,
         k_offset_ratio_per_group={
-            "Grupo_A": 0.8,
+            "Grupo_A": 0.6,
             "Grupo_B": 0.2,
         },
 
