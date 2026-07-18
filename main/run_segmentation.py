@@ -43,7 +43,7 @@ if __name__ == "__main__":
         k_offset_ratio=0.6,
         k_offset_ratio_per_group={
             "Grupo_A": 0.6,
-            "Grupo_B": 0.6,
+            "Grupo_B": 0.2,
         },
 
         # Refinamiento con baseline local pre-countdown (5s antes del countdown)
