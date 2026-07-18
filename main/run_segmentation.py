@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
         # Rescate automatico dentro de huecos anomalos
         gap_rescue_enabled=True,
-        gap_rescue_k_factor=0.5,
+        gap_rescue_k_factor=0.9,
 
         # CSV completo etiquetado (Reposo / Countdown_Emocion / <Emocion>)
         export_labeled_full_csv=True,
