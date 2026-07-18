@@ -96,6 +96,11 @@ class Config:
     # Sanity check: marcar huecos entre eventos fuera de lo esperado 
     expected_gap_min_sec: float = 3.0
     expected_gap_max_sec: float = 25.0
+
+    # Rescate automatico dentro de huecos anomalos
+    # Segunda pasada, restringida SOLO a las ventanas marcadas como hueco largo
+    gap_rescue_enabled: bool = True
+    gap_rescue_k_factor: float = 0.5
  
     # Etiquetado del CSV completo (processed + label) 
     export_labeled_full_csv: bool = True
