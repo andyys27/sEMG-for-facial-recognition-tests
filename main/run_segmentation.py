@@ -70,7 +70,11 @@ if __name__ == "__main__":
 
         # Forma de onda y gap filling
         smoothing_window_sec=0.5,       # Suavizado antes de detectar cruces
+
+        # Gap filling
         gap_fill_sec=3.0,               # Brecha maxima dentro de un mismo gesto
+
+        # Duracion valida de un evento por canal
         min_event_dur_sec=2.0,          # Minimo post-gap-filling
         max_event_dur_sec=22.0,         # Maximo (gestos no duran mas de esto)
 
@@ -86,6 +90,10 @@ if __name__ == "__main__":
         # Sanity check: marcar huecos entre eventos fuera de lo esperado 
         expected_gap_min_sec=3.0,
         expected_gap_max_sec=25.0,
+
+        # Rescate automatico dentro de huecos anomalos
+        gap_rescue_enabled=True,
+        gap_rescue_k_factor=0.5,
 
         # CSV completo etiquetado (Reposo / Countdown_Emocion / <Emocion>)
         export_labeled_full_csv=True,

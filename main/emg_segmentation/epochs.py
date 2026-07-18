@@ -1,7 +1,8 @@
 """
 Extraccion de epocas individuales por gesto y exportacion a CSV
-(un archivo por bloque/emocion, mas el reporte de metricas de deteccion)
+(un archivo por bloque/emocion, mas el reporte de metricas de deteccion).
 """
+
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -86,6 +87,7 @@ def export_metrics(consensus_events, cfg):
             "Duration_s": round(dur, 4),
             "Gap_From_Prev_s": gap_prev,
             "Gap_Flag": gap_flag,
+            "Rescued_From_Gap": ev.get("rescued_from_gap", False),
             "N_Groups": ev["n_groups"],
             "Groups_Active": ", ".join(sorted(ev["groups_active"])),
             "Channels_Active": ", ".join(sorted(set(ev["channels_active"]))),
