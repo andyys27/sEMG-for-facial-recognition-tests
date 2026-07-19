@@ -100,7 +100,7 @@ if __name__ == "__main__":
         labeled_csv_name="Data/processed_labeled.csv",
 
         debug_rejections=True,
-        save_config_json=True,
+        save_config_json=False,
     )
     epoch_slicing(cfg)
     if cfg.save_config_json:
