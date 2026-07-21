@@ -12,3 +12,6 @@ Test*/Sonrisa/*.csv
 Test*/Disgusto/*.csv
 Test*/Sorprendido/*.csv
 Test*/Triste/*.csv
+
+# DATASET DE ENTRENAMIENTO
+Dataset/features_dataset.csv
