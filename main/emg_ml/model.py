@@ -1,11 +1,12 @@
 """
-Carga del dataset de features y entrenamiento/evaluacion del modelo
-baseline (Random Forest) con validacion Leave-One-Subject-Out (LOSO): en
-cada fold se entrena con todos los sujetos menos uno, y se prueba con el
-sujeto excluido. Es el enfoque correcto para EMG multi-sujeto — evita que
-el modelo "memorice" la fisiologia de una persona en vez de aprender el
-gesto en si, y escala automaticamente segun agregues mas sujetos.
+Carga del dataset de features y train/test del modelo baseline (Random Forest) con validacion 
+Leave-One-Subject-Out (LOSO): en cada fold se entrena con todos los sujetos menos uno, y se 
+prueba con el sujeto excluido
+
+Evita que el modelo "memorice" la fisiologia de una persona en vez de aprender el gesto en si, 
+y escala automaticamente segun agregues mas sujetos
 """
+
 import numpy as np
 import pandas as pd
 
@@ -25,11 +26,8 @@ def load_dataset(path):
 
 def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
              only_high_confidence=False, n_estimators=300, random_state=42):
-    """
-    Corre LOSO completo e imprime el reporte por fold + el agregado.
-    only_high_confidence=True entrena SOLO con muestras Confidence=="Alta"
-    (las de baja confianza, rescatadas, se usan igual para evaluar).
-    """
+    # Corre LOSO completo e imprime el reporte por fold + el agregado.
+    # only_high_confidence=True entrena SOLO con muestras Confidence=="Alta"
     X = df[feature_cols].values
     y = df[label_col].values
     groups = df[group_col].values

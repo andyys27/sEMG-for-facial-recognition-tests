@@ -7,7 +7,6 @@ Phinyomark et al. (2012) — MAV, RMS, WL, ZC, SSC
 
 import numpy as np
 
-
 def _zero_crossings(x, threshold):
     # Cuenta cruces por cero, ignorando fluctuaciones menores al umbral
     signs = np.sign(x)
@@ -58,10 +57,8 @@ def time_domain_features(x, noise_threshold=None):
 
 
 def compute_window_features(window_df, channel_groups):
-    """
-    Calcula todas las features de una ventana para los 4 canales +
-    features cruzadas entre grupos musculares
-    """
+    # Calcula todas las features de una ventana para los 4 canales +
+    # features cruzadas entre grupos musculares  
     feats = {}
     all_channels = [ch for chs in channel_groups.values() for ch in chs]
 

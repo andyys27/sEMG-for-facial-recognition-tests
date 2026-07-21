@@ -3,6 +3,7 @@ Pipeline principal: carga datos, calcula baseline/umbral por canal,
 detecta activaciones, arma el consenso, refina onset/offset, exporta
 epocas + CSV completo etiquetado, y genera las graficas de diagnostico.
 """
+
 import numpy as np
 import pandas as pd
 
