@@ -2,10 +2,10 @@
 Entrena y evalua un clasificador Random Forest sobre el dataset de
 features (logica de load/train en emg_ml.model)
 
-python -m main.train_baseline.py
+python -m main.train_baseline
 """
 
-from emg_ml import load_dataset, run_loso
+from .emg_ml import load_dataset, run_loso
 
 
 if __name__ == "__main__":
