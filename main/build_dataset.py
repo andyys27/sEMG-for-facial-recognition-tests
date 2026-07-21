@@ -15,10 +15,6 @@ if __name__ == "__main__":
     output_path.parent.mkdir(exist_ok=True)
 
     cfg = DatasetConfig(
-        channel_groups={
-            "Grupo_A": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
-            "Grupo_B": ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"],
-        },
         window_sec=0.25,
         overlap=0.5,
         exclude_countdown=True,
@@ -26,9 +22,13 @@ if __name__ == "__main__":
     )
 
     # Agrega aqui cada sujeto que tengas procesado
-    subject_csv_map = {
-        "sujeto1": root / "Test1" / "Data" / "processed_labeled.csv",
-        "sujeto2": root / "Test2" / "Data" / "processed_labeled.csv",
+    subject_specs = {
+        "Test1": ( root / "Test1" / "Data" / "processed_labeled.csv",
+            {"Grupo_A": ["EMG1_Envelope_RMS", "EMG4_Envelope_RMS"],
+            "Grupo_B": ["EMG2_Envelope_RMS", "EMG3_Envelope_RMS"]}),
+        "Test2": ( root / "Test2" / "Data" / "processed_labeled.csv",
+            {"Grupo_A": ["EMG1_Envelope_RMS", "EMG2_Envelope_RMS"],
+            "Grupo_B": ["EMG3_Envelope_RMS", "EMG4_Envelope_RMS"]}),
     }
 
-    dataset = build_dataset(subject_csv_map, cfg, output_path=output_path)
+    dataset = build_dataset(subject_specs, cfg, output_path=output_path)

@@ -61,7 +61,6 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
 
-        print(f"\n{'='*60}")
         print(f"Fold: test = {test_subject}  (train: {[s for s in subjects if s != test_subject]})")
         print(f"  train windows: {len(X_train)}  |  test windows: {len(X_test)}")
         print(classification_report(y_test, y_pred, zero_division=0))
@@ -71,9 +70,7 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
         importances += clf.feature_importances_
         n_folds += 1
 
-    print(f"\n{'='*60}")
     print("REPORTE AGREGADO (todos los folds LOSO juntos)")
-    print(f"{'='*60}")
     print(classification_report(all_true, all_pred, zero_division=0))
 
     labels_sorted = sorted(set(all_true) | set(all_pred))
