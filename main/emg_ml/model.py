@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.model_selection import LeaveOneGroupOut
 
 
@@ -25,7 +25,7 @@ def load_dataset(path):
 
 
 def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
-             only_high_confidence=False, n_estimators=300, random_state=42):
+             only_high_confidence=False, n_estimators=300, random_state=42):     
     # Corre LOSO completo e imprime el reporte por fold + el agregado.
     # only_high_confidence=True entrena SOLO con muestras Confidence=="Alta"
     X = df[feature_cols].values
@@ -34,6 +34,7 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
 
     logo = LeaveOneGroupOut()
     all_true, all_pred = [], []
+    fold_results = []
     importances = np.zeros(len(feature_cols))
     n_folds = 0
 
@@ -42,7 +43,7 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
         print(f"⚠ Solo hay {len(subjects)} sujeto(s) ({subjects}). "
               f"LOSO necesita al menos 2 para tener sentido — "
               f"agrega mas sujetos antes de confiar en estas metricas.")
-        return
+        return None, [], [], []
 
     for train_idx, test_idx in logo.split(X, y, groups):
         test_subject = groups[test_idx][0]
@@ -61,8 +62,12 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
 
-        print(f"Fold: test = {test_subject}  (train: {[s for s in subjects if s != test_subject]})")
-        print(f"  train windows: {len(X_train)}  |  test windows: {len(X_test)}")
+        # Calculo de accuracy individual del fold
+        fold_acc = accuracy_score(y_test, y_pred)
+        fold_results.append((test_subject, fold_acc))
+
+        print(f"\nFold: test = {test_subject}  (train: {[s for s in subjects if s != test_subject]})")
+        print(f"  train windows: {len(X_train)}  |  test windows: {len(X_test)}  |  Accuracy: {fold_acc*100:.2f}%")
         print(classification_report(y_test, y_pred, zero_division=0))
 
         all_true.extend(y_test)
@@ -70,7 +75,9 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
         importances += clf.feature_importances_
         n_folds += 1
 
+    print("\n" + "=" * 60)
     print("REPORTE AGREGADO (todos los folds LOSO juntos)")
+    print("=" * 60)
     print(classification_report(all_true, all_pred, zero_division=0))
 
     labels_sorted = sorted(set(all_true) | set(all_pred))
@@ -83,4 +90,5 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
     print(f"\nTop 15 features mas importantes (promedio entre folds):")
     print(imp_df.head(15).to_string())
 
-    return imp_df
+    # Retorna todas las variables necesarias para el modulo de plots
+    return imp_df, all_true, all_pred, fold_results
