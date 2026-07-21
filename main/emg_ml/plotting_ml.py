@@ -13,15 +13,6 @@ import pandas as pd
 from pathlib import Path
 from sklearn.metrics import confusion_matrix
 
-# Paleta de colores consistente con el resto del proyecto
-EMOTION_COLORS = {
-    "Reposo": "gray",
-    "Disgusto": "red",    
-    "Sonrisa": "green",    
-    "Sorprendido": "blue", 
-    "Triste": "purple",      
-}
-
 
 def plot_confusion_matrix(y_true, y_pred, classes=None, output_dir="Results", dpi=300, prefix="loso"):    
     # Genera y guarda un mapa de calor de la matriz de confusion con conteo y porcentaje por fila
