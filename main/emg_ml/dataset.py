@@ -7,6 +7,7 @@ evento (Block+Emotion)
 Enfoque estandar en clasificacion de gestos EMG (Hudgins et al. 1993 usa 256ms/~doble de 
 overlap)
 """
+
 from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
