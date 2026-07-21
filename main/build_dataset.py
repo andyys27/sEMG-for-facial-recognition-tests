@@ -5,7 +5,7 @@ processed_labeled.csv de cada sujeto ya generados por run_segmentation.py
 python -m main.build_dataset.py
 """
 
-from emg_ml import DatasetConfig, build_dataset
+from .emg_ml import DatasetConfig, build_dataset
 
 
 if __name__ == "__main__":
