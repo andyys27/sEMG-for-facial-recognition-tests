@@ -1,6 +1,6 @@
 """
 Construye el dataset de features (una fila por ventana) a partir de los
-processed_labeled.csv de cada sujeto ya generados por run_segmentation.py.
+processed_labeled.csv de cada sujeto ya generados por run_segmentation.py
 
 python -m main.build_dataset.py
 """
