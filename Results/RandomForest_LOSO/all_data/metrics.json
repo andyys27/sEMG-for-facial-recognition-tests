@@ -1,0 +1,46 @@
+{
+  "model": "RandomForest",
+  "scenario": "all_data",
+  "overall_accuracy": 0.45946274462136866,
+  "macro_precision": 0.2540057914805224,
+  "macro_recall": 0.2682553487588559,
+  "macro_f1": 0.24850353291942887,
+  "weighted_f1": 0.38895815301472253,
+  "per_class_precision": {
+    "Disgusto": 0.08820960698689956,
+    "Reposo": 0.5951994224869157,
+    "Sonrisa": 0.31735537190082647,
+    "Sorprendido": 0.020942408376963352,
+    "Triste": 0.2483221476510067
+  },
+  "per_class_recall": {
+    "Disgusto": 0.08836395450568679,
+    "Reposo": 0.9001091703056768,
+    "Sonrisa": 0.20104712041884817,
+    "Sorprendido": 0.003281378178835111,
+    "Triste": 0.14847512038523275
+  },
+  "per_class_f1": {
+    "Disgusto": 0.08828671328671328,
+    "Reposo": 0.716567083107007,
+    "Sonrisa": 0.24615384615384617,
+    "Sorprendido": 0.005673758865248227,
+    "Triste": 0.18583626318432947
+  },
+  "fold_accuracy_mean": 0.47173864310842445,
+  "fold_accuracy_std": 0.035674255334866845,
+  "fold_results": [
+    {
+      "test_subject": "Test1",
+      "n_train": 2698,
+      "n_test": 5529,
+      "accuracy": 0.4360643877735576
+    },
+    {
+      "test_subject": "Test2",
+      "n_train": 5529,
+      "n_test": 2698,
+      "accuracy": 0.5074128984432913
+    }
+  ]
+}

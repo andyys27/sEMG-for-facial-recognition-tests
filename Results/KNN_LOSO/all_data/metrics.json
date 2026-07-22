@@ -1,0 +1,46 @@
+{
+  "model": "KNN",
+  "scenario": "all_data",
+  "overall_accuracy": 0.41570438799076215,
+  "macro_precision": 0.20564624950852473,
+  "macro_recall": 0.23161308152600907,
+  "macro_f1": 0.20702364972837944,
+  "weighted_f1": 0.3487562828548016,
+  "per_class_precision": {
+    "Disgusto": 0.11756569847856155,
+    "Reposo": 0.5674676524953789,
+    "Sonrisa": 0.20599250936329588,
+    "Sorprendido": 0.016835016835016835,
+    "Triste": 0.12037037037037036
+  },
+  "per_class_recall": {
+    "Disgusto": 0.14873140857392825,
+    "Reposo": 0.837882096069869,
+    "Sonrisa": 0.11518324607329843,
+    "Sorprendido": 0.004101722723543888,
+    "Triste": 0.0521669341894061
+  },
+  "per_class_f1": {
+    "Disgusto": 0.13132483584395518,
+    "Reposo": 0.6766585849680405,
+    "Sonrisa": 0.14775016789791806,
+    "Sorprendido": 0.006596306068601583,
+    "Triste": 0.07278835386338185
+  },
+  "fold_accuracy_mean": 0.42001520790505376,
+  "fold_accuracy_std": 0.012527416260995156,
+  "fold_results": [
+    {
+      "test_subject": "Test1",
+      "n_train": 2698,
+      "n_test": 5529,
+      "accuracy": 0.40748779164405863
+    },
+    {
+      "test_subject": "Test2",
+      "n_train": 5529,
+      "n_test": 2698,
+      "accuracy": 0.43254262416604894
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "model": "LDA",
+  "scenario": "high_confidence",
+  "overall_accuracy": 0.38969247599367934,
+  "macro_precision": 0.24863018377715118,
+  "macro_recall": 0.2640201077130958,
+  "macro_f1": 0.23681078935395755,
+  "weighted_f1": 0.3647229291373123,
+  "per_class_precision": {
+    "Disgusto": 0.053811659192825115,
+    "Reposo": 0.6358009408269374,
+    "Sonrisa": 0.2006737247353224,
+    "Sorprendido": 0.08492201039861352,
+    "Triste": 0.2679425837320574
+  },
+  "per_class_recall": {
+    "Disgusto": 0.05249343832020997,
+    "Reposo": 0.7008733624454149,
+    "Sonrisa": 0.43664921465968587,
+    "Sorprendido": 0.04019688269073011,
+    "Triste": 0.0898876404494382
+  },
+  "per_class_f1": {
+    "Disgusto": 0.053144375553587246,
+    "Reposo": 0.6667532130338829,
+    "Sonrisa": 0.27497527200791294,
+    "Sorprendido": 0.05456570155902005,
+    "Triste": 0.1346153846153846
+  },
+  "fold_accuracy_mean": 0.3618526132377553,
+  "fold_accuracy_std": 0.08090376223701404,
+  "fold_results": [
+    {
+      "test_subject": "Test1",
+      "n_train": 2698,
+      "n_test": 5529,
+      "accuracy": 0.44275637547476937
+    },
+    {
+      "test_subject": "Test2",
+      "n_train": 5529,
+      "n_test": 2698,
+      "accuracy": 0.2809488510007413
+    }
+  ]
+}

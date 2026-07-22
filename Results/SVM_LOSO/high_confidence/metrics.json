@@ -1,0 +1,46 @@
+{
+  "model": "SVM",
+  "scenario": "high_confidence",
+  "overall_accuracy": 0.4786678011425793,
+  "macro_precision": 0.31099479980233896,
+  "macro_recall": 0.30260336952462846,
+  "macro_f1": 0.2927107356515809,
+  "weighted_f1": 0.4170316229590526,
+  "per_class_precision": {
+    "Disgusto": 0.29606299212598425,
+    "Reposo": 0.5924507658643327,
+    "Sonrisa": 0.36946564885496186,
+    "Sorprendido": 0.0635593220338983,
+    "Triste": 0.23343527013251783
+  },
+  "per_class_recall": {
+    "Disgusto": 0.16447944006999124,
+    "Reposo": 0.886735807860262,
+    "Sonrisa": 0.2534031413612565,
+    "Sorprendido": 0.02461033634126333,
+    "Triste": 0.18378812199036917
+  },
+  "per_class_f1": {
+    "Disgusto": 0.21147356580427445,
+    "Reposo": 0.710319195452558,
+    "Sonrisa": 0.30062111801242236,
+    "Sorprendido": 0.03548196333530455,
+    "Triste": 0.2056578356533453
+  },
+  "fold_accuracy_mean": 0.4894429881877629,
+  "fold_accuracy_std": 0.031313127453452855,
+  "fold_results": [
+    {
+      "test_subject": "Test1",
+      "n_train": 2698,
+      "n_test": 5529,
+      "accuracy": 0.45812986073431
+    },
+    {
+      "test_subject": "Test2",
+      "n_train": 5529,
+      "n_test": 2698,
+      "accuracy": 0.5207561156412157
+    }
+  ]
+}
