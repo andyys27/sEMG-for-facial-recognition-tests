@@ -162,12 +162,12 @@ python -m main.compare_models
 ├── Test1/                        # Datos y configuración de segmentación del sujeto 1
 │   ├── config_test1.json
 │   ├── Analysis/
-│   ├── Active_Channels
+│   ├── Active_Channels/
 │   └── Data/
 └── Test2/                        # Datos y configuración de segmentación del sujeto 2
     ├── config_test2.json
     ├── Analysis/
-    ├── Active_Channels
+    ├── Active_Channels/
     └── Data/
 ```
 
@@ -178,7 +178,7 @@ python -m main.compare_models
 ## ⚙️ Instalación
 
 ```bash
-git clone https://github.com/<tu-usuario>/sEMG-for-facial-recognition-tests.git
+git clone https://github.com/andyys27/sEMG-for-facial-recognition-tests.git
 cd sEMG-for-facial-recognition-tests
 python -m venv .venv
 source .venv/bin/activate      # En Windows: .venv\Scripts\activate
