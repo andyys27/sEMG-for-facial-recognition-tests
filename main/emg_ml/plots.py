@@ -85,11 +85,8 @@ def save_fold_accuracy(fold_results, save_path, title="Accuracy por fold (sujeto
 
 def generate_all_plots(df, feature_cols, output_dir, model_name="rf", model_label=None,
                         only_high_confidence=False, random_state=42, top_n_features=15):
-    """
-    Corre LOSO una sola vez (con el modelo model_name, ver emg_ml.models) y
-    guarda las 4 graficas dentro de output_dir.
-    Devuelve el dict de resultados de run_loso (por si quieres inspeccionar mas).
-    """
+    # Corre LOSO una sola vez y guarda las 4 graficas dentro de output_dir
+    # Devuelve el dict de resultados de run_loso 
     from .models import MODEL_NAMES
 
     output_dir = Path(output_dir)
@@ -104,28 +101,17 @@ def generate_all_plots(df, feature_cols, output_dir, model_name="rf", model_labe
         print(f"  (sin resultados: no se generaron graficas en {output_dir})")
         return None
 
-    save_confusion_matrix(results["cm"], results["labels"],
-                           output_dir / "confusion_matrix.png",
-                           title=f"Matriz de confusion - {label}")
-    save_feature_importance(results["imp_df"], output_dir / "feature_importance.png",
-                             top_n=top_n_features,
-                             title=f"Importancia de features - {label}")
-    save_class_metrics(results["report_dict"], output_dir / "class_metrics.png",
-                        title=f"Precision / Recall / F1 por clase - {label}")
-    save_fold_accuracy(results["fold_results"], output_dir / "fold_accuracy.png",
-                        title=f"Accuracy por fold - {label}")
+    save_confusion_matrix(results["cm"], results["labels"], output_dir / "confusion_matrix.png", title=f"Matriz de confusion - {label}")
+    save_feature_importance(results["imp_df"], output_dir / "feature_importance.png", top_n=top_n_features, title=f"Importancia de features - {label}")
+    save_class_metrics(results["report_dict"], output_dir / "class_metrics.png", title=f"Precision / Recall / F1 por clase - {label}")
+    save_fold_accuracy(results["fold_results"], output_dir / "fold_accuracy.png", title=f"Accuracy por fold - {label}")
 
     print(f"  -> Graficas guardadas en: {output_dir}")
     return results
 
 
 def generate_cnn_plots(results, output_dir, model_label="CNN"):
-    """
-    Igual que generate_all_plots pero para los resultados de run_loso_cnn
-    (cnn_model.py). No hay importancia de features nativa para el CNN, asi
-    que solo se guardan matriz de confusion, metricas por clase y accuracy
-    por fold.
-    """
+    # Resultados de run_loso_cnn 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -133,13 +119,9 @@ def generate_cnn_plots(results, output_dir, model_label="CNN"):
         print(f"  (sin resultados: no se generaron graficas en {output_dir})")
         return None
 
-    save_confusion_matrix(results["cm"], results["labels"],
-                           output_dir / "confusion_matrix.png",
-                           title=f"Matriz de confusion - {model_label}")
-    save_class_metrics(results["report_dict"], output_dir / "class_metrics.png",
-                        title=f"Precision / Recall / F1 por clase - {model_label}")
-    save_fold_accuracy(results["fold_results"], output_dir / "fold_accuracy.png",
-                        title=f"Accuracy por fold - {model_label}")
+    save_confusion_matrix(results["cm"], results["labels"], output_dir / "confusion_matrix.png", title=f"Matriz de confusion - {model_label}")
+    save_class_metrics(results["report_dict"], output_dir / "class_metrics.png", title=f"Precision / Recall / F1 por clase - {model_label}")
+    save_fold_accuracy(results["fold_results"], output_dir / "fold_accuracy.png", title=f"Accuracy por fold - {model_label}")
 
     print(f"  -> Graficas guardadas en: {output_dir}")
     return results

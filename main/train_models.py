@@ -30,11 +30,7 @@ if __name__ == "__main__":
         print(f"\n{'=' * 70}\nModelo: {model_label}\n{'=' * 70}")
 
         print(f"\n# {model_label} - entrenando con TODO (incluye baja confianza)")
-        generate_all_plots(df, feature_cols, output_dir / "all_data",
-                            model_name=model_key, model_label=model_label,
-                            only_high_confidence=False)
+        generate_all_plots(df, feature_cols, output_dir / "all_data", model_name=model_key, model_label=model_label, only_high_confidence=False)
 
         print(f"\n# {model_label} - entrenando SOLO con alta confianza")
-        generate_all_plots(df, feature_cols, output_dir / "high_confidence",
-                            model_name=model_key, model_label=model_label,
-                            only_high_confidence=True)
+        generate_all_plots(df, feature_cols, output_dir / "high_confidence", model_name=model_key, model_label=model_label, only_high_confidence=True)
