@@ -10,9 +10,11 @@ y escala automaticamente segun agregues mas sujetos
 import numpy as np
 import pandas as pd
 
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.model_selection import LeaveOneGroupOut
+
+from .models import build_model
 
 
 NON_FEATURE_COLS = {"Subject", "Label", "Emotion", "Block", "Confidence", "Window_Start_s"}
@@ -25,9 +27,13 @@ def load_dataset(path):
 
 
 def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
-             only_high_confidence=False, n_estimators=300, random_state=42,
-             return_results=False):
-    # Corre LOSO completo e imprime el reporte por fold + el agregado.
+             model_name="rf", only_high_confidence=False, random_state=42,
+             return_results=False):    
+    # Corre LOSO completo e imprime el reporte por fold + el agregado
+
+    # model_name: "rf" | "svm" | "knn" | "lda" | "mlp" (ver emg_ml.models)
+    # Random Forest usa feature_importances_ nativo
+    # Para SVM/KNN/LDA/MLP se calcula permutation_importance sobre el fold de test
     X = df[feature_cols].values
     y = df[label_col].values
     groups = df[group_col].values
@@ -57,8 +63,7 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
         X_test = X[test_idx]
         y_test = y[test_idx]
 
-        clf = RandomForestClassifier(n_estimators=n_estimators, random_state=random_state,
-                                      class_weight="balanced")
+        clf = build_model(model_name, random_state=random_state)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
 
@@ -70,7 +75,15 @@ def run_loso(df, feature_cols, label_col="Label", group_col="Subject",
 
         all_true.extend(y_test)
         all_pred.extend(y_pred)
-        importances += clf.feature_importances_
+
+        base_clf = clf.named_steps["clf"]
+        if hasattr(base_clf, "feature_importances_"):
+            importances += base_clf.feature_importances_
+        else:
+            perm = permutation_importance(clf, X_test, y_test, n_repeats=10,
+                                           random_state=random_state, n_jobs=-1)
+            importances += perm.importances_mean
+
         n_folds += 1
         fold_results.append({
             "test_subject": test_subject,
