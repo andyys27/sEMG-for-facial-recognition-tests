@@ -13,3 +13,9 @@ Test*/Disgusto/*.csv
 Test*/Sorprendido/*.csv
 Test*/Triste/*.csv
 
+# DATASET DE ML Y DL
+features_dataset.csv
+raw_windows.npz
+
+# COMPARACIONES DE MODELOS DE ML Y DL
+Results/comparison/*.csv
