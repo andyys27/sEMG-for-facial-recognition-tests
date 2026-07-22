@@ -26,18 +26,15 @@ def build_model(name, random_state=42):
     name = name.lower()
 
     if name in ("rf", "random_forest"):
-        clf = RandomForestClassifier(n_estimators=300, random_state=random_state,
-                                      class_weight="balanced")
+        clf = RandomForestClassifier(n_estimators=300, random_state=random_state, class_weight="balanced")
     elif name == "svm":
-        clf = SVC(kernel="rbf", C=10, gamma="scale", class_weight="balanced",
-                   random_state=random_state)
+        clf = SVC(kernel="rbf", C=10, gamma="scale", class_weight="balanced", random_state=random_state)
     elif name == "knn":
         clf = KNeighborsClassifier(n_neighbors=7, weights="distance")
     elif name == "lda":
         clf = LinearDiscriminantAnalysis()
     elif name == "mlp":
-        clf = MLPClassifier(hidden_layer_sizes=(64, 32), activation="relu",
-                             alpha=1e-3, max_iter=1000, random_state=random_state)
+        clf = MLPClassifier(hidden_layer_sizes=(64, 32), activation="relu", alpha=1e-3, max_iter=1000, random_state=random_state)
     else:
         raise ValueError(f"Modelo desconocido: {name}. Opciones: {list(MODEL_NAMES)}")
 
