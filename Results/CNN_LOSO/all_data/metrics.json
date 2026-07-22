@@ -1,46 +1,90 @@
 {
   "model": "CNN",
   "scenario": "all_data",
-  "overall_accuracy": 0.30266196669502854,
-  "macro_precision": 0.23641662641304118,
-  "macro_recall": 0.24248404585196112,
-  "macro_f1": 0.21936215215530339,
-  "weighted_f1": 0.3151761826906382,
+  "overall_accuracy": 0.32855232770147075,
+  "macro_precision": 0.24084018946404054,
+  "macro_recall": 0.24044345715972154,
+  "macro_f1": 0.23381925068235732,
+  "weighted_f1": 0.3375276946520774,
   "per_class_precision": {
-    "Disgusto": 0.1462079749804535,
-    "Reposo": 0.6612584091808469,
-    "Sonrisa": 0.14555389965226032,
-    "Sorprendido": 0.05235602094240838,
-    "Triste": 0.17670682730923695
+    "Disgusto": 0.14634146341463414,
+    "Reposo": 0.6213093709884467,
+    "Sonrisa": 0.1261595547309833,
+    "Sorprendido": 0.09315866084425037,
+    "Triste": 0.21723189734188816
   },
   "per_class_recall": {
-    "Disgusto": 0.32720909886264216,
-    "Reposo": 0.4560589519650655,
-    "Sonrisa": 0.3068062827225131,
-    "Sorprendido": 0.016406890894175553,
-    "Triste": 0.10593900481540931
+    "Disgusto": 0.2887139107611549,
+    "Reposo": 0.5283842794759825,
+    "Sonrisa": 0.1424083769633508,
+    "Sorprendido": 0.052502050861361775,
+    "Triste": 0.19020866773675763
   },
   "per_class_f1": {
-    "Disgusto": 0.20210753850310728,
-    "Reposo": 0.5398158617347762,
-    "Sonrisa": 0.19743935309973046,
-    "Sorprendido": 0.024984384759525295,
-    "Triste": 0.13246362267937783
+    "Disgusto": 0.19423190111830488,
+    "Reposo": 0.5710914454277286,
+    "Sonrisa": 0.1337924249877029,
+    "Sorprendido": 0.06715634837355719,
+    "Triste": 0.20282413350449294
   },
-  "fold_accuracy_mean": 0.2818257892444193,
-  "fold_accuracy_std": 0.0605507707121732,
+  "fold_accuracy_mean": 0.32405128910558667,
+  "fold_accuracy_std": 0.013080199409515492,
   "fold_results": [
     {
       "test_subject": "Test1",
       "n_train": 2698,
       "n_test": 5529,
-      "accuracy": 0.3423765599565925
+      "accuracy": 0.33713148851510216
     },
     {
       "test_subject": "Test2",
       "n_train": 5529,
       "n_test": 2698,
-      "accuracy": 0.2212750185322461
+      "accuracy": 0.3109710896960712
     }
+  ],
+  "confusion_matrix": [
+    [
+      330,
+      343,
+      120,
+      89,
+      261
+    ],
+    [
+      720,
+      1936,
+      410,
+      391,
+      207
+    ],
+    [
+      206,
+      301,
+      136,
+      72,
+      240
+    ],
+    [
+      565,
+      250,
+      194,
+      64,
+      146
+    ],
+    [
+      434,
+      286,
+      218,
+      71,
+      237
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "Disgusto",
+    "Reposo",
+    "Sonrisa",
+    "Sorprendido",
+    "Triste"
   ]
 }

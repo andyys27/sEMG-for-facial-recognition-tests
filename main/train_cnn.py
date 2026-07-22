@@ -42,7 +42,7 @@ if __name__ == "__main__":
  
     print(f"\nX shape: {raw_data['X'].shape}, clases: {sorted(set(raw_data['y']))}")
  
-    output_dir = results_root / "CNN_LOSO" / "todo"
+    output_dir = results_root / "CNN_LOSO" / "all_data"
     print(f"\n{'=' * 70}\nCNN - todo\n{'=' * 70}")
     results = run_loso_cnn(raw_data, only_high_confidence=False, return_results=True)
     if results is not None:
