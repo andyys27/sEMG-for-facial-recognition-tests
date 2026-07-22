@@ -17,7 +17,7 @@ if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
     raw_dataset_path = root / "Dataset" / "raw_windows.npz"
     results_root = root / "Results"
-
+ 
     cfg = RawDatasetConfig(
         signal_type="Filtered",
         window_sec=0.25,
@@ -39,12 +39,11 @@ if __name__ == "__main__":
         print(f"Dataset crudo cargado desde cache: {raw_dataset_path}")
     else:
         raw_data = build_raw_dataset(subject_specs, cfg=cfg, output_path=raw_dataset_path)
-
+ 
     print(f"\nX shape: {raw_data['X'].shape}, clases: {sorted(set(raw_data['y']))}")
-
-    for split_label, only_high in [("all_data", False), ("high_confidence", True)]:
-        output_dir = results_root / "CNN_LOSO" / split_label
-        print(f"\n{'=' * 70}\nCNN - {split_label}\n{'=' * 70}")
-        results = run_loso_cnn(raw_data, only_high_confidence=only_high, return_results=True)
-        if results is not None:
-            generate_cnn_plots(results, output_dir)
+ 
+    output_dir = results_root / "CNN_LOSO" / "todo"
+    print(f"\n{'=' * 70}\nCNN - todo\n{'=' * 70}")
+    results = run_loso_cnn(raw_data, only_high_confidence=False, return_results=True)
+    if results is not None:
+        generate_cnn_plots(results, output_dir)
