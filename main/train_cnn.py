@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     print(f"\nX shape: {raw_data['X'].shape}, clases: {sorted(set(raw_data['y']))}")
 
-    for split_label, only_high in [("todo", False), ("alta_confianza", True)]:
+    for split_label, only_high in [("all_data", False), ("high_confidence", True)]:
         output_dir = results_root / "CNN_LOSO" / split_label
         print(f"\n{'=' * 70}\nCNN - {split_label}\n{'=' * 70}")
         results = run_loso_cnn(raw_data, only_high_confidence=only_high, return_results=True)

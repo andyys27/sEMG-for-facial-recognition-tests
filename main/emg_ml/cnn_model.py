@@ -112,8 +112,7 @@ def run_loso_cnn(raw_data, only_high_confidence=False, epochs=40, batch_size=32,
     if not return_results:
         return None
 
-    report_dict = classification_report(all_true, all_pred, target_names=class_names,
-                                         zero_division=0, output_dict=True)
+    report_dict = classification_report(all_true, all_pred, target_names=class_names, zero_division=0, output_dict=True)
     return {
         "cm": cm,
         "labels": label_names_sorted,
