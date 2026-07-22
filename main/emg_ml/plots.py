@@ -7,7 +7,10 @@ Genera y guarda las graficas de evaluacion del modelo Random Forest (LOSO):
 """
 
 from pathlib import Path
+import json
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import ConfusionMatrixDisplay
@@ -83,10 +86,48 @@ def save_fold_accuracy(fold_results, save_path, title="Accuracy por fold (sujeto
     plt.close(fig)
 
 
-def generate_all_plots(df, feature_cols, output_dir, model_name="rf", model_label=None,
-                        only_high_confidence=False, random_state=42, top_n_features=15):
-    # Corre LOSO una sola vez y guarda las 4 graficas dentro de output_dir
-    # Devuelve el dict de resultados de run_loso 
+def save_metrics_json(results, save_path, model_label, scenario):
+    # Guarda un resumen numerico de los resultados de un modelo+escenario
+    report = results["report_dict"]
+    classes = [k for k in report.keys() if k not in ("accuracy", "macro avg", "weighted avg")]
+
+    fold_results_clean = [
+        {
+            "test_subject": str(f["test_subject"]),
+            "n_train": int(f["n_train"]),
+            "n_test": int(f["n_test"]),
+            "accuracy": float(f["accuracy"]),
+        }
+        for f in results["fold_results"]
+    ]
+    fold_accs = [f["accuracy"] for f in fold_results_clean]
+
+    metrics = {
+        "model": model_label,
+        "scenario": scenario,
+        "overall_accuracy": float(report["accuracy"]),
+        "macro_precision": float(report["macro avg"]["precision"]),
+        "macro_recall": float(report["macro avg"]["recall"]),
+        "macro_f1": float(report["macro avg"]["f1-score"]),
+        "weighted_f1": float(report["weighted avg"]["f1-score"]),
+        "per_class_precision": {c: float(report[c]["precision"]) for c in classes},
+        "per_class_recall": {c: float(report[c]["recall"]) for c in classes},
+        "per_class_f1": {c: float(report[c]["f1-score"]) for c in classes},
+        "fold_accuracy_mean": float(np.mean(fold_accs)),
+        "fold_accuracy_std": float(np.std(fold_accs)),
+        "fold_results": fold_results_clean,
+    }
+
+    save_path = Path(save_path)
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=2, ensure_ascii=False)
+
+    return metrics
+
+
+def generate_all_plots(df, feature_cols, output_dir, model_name="rf", model_label=None, only_high_confidence=False, random_state=42, top_n_features=15):
+    # Corre LOSO una sola vez y guarda las graficas
     from .models import MODEL_NAMES
 
     output_dir = Path(output_dir)
@@ -105,13 +146,13 @@ def generate_all_plots(df, feature_cols, output_dir, model_name="rf", model_labe
     save_feature_importance(results["imp_df"], output_dir / "feature_importance.png", top_n=top_n_features, title=f"Importancia de features - {label}")
     save_class_metrics(results["report_dict"], output_dir / "class_metrics.png", title=f"Precision / Recall / F1 por clase - {label}")
     save_fold_accuracy(results["fold_results"], output_dir / "fold_accuracy.png", title=f"Accuracy por fold - {label}")
+    save_metrics_json(results, output_dir / "metrics.json", model_label=label, scenario=output_dir.name)
 
     print(f"  -> Graficas guardadas en: {output_dir}")
     return results
 
 
 def generate_cnn_plots(results, output_dir, model_label="CNN"):
-    # Resultados de run_loso_cnn 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -122,6 +163,7 @@ def generate_cnn_plots(results, output_dir, model_label="CNN"):
     save_confusion_matrix(results["cm"], results["labels"], output_dir / "confusion_matrix.png", title=f"Matriz de confusion - {model_label}")
     save_class_metrics(results["report_dict"], output_dir / "class_metrics.png", title=f"Precision / Recall / F1 por clase - {model_label}")
     save_fold_accuracy(results["fold_results"], output_dir / "fold_accuracy.png", title=f"Accuracy por fold - {model_label}")
+    save_metrics_json(results, output_dir / "metrics.json", model_label=model_label, scenario=output_dir.name)
 
     print(f"  -> Graficas guardadas en: {output_dir}")
     return results
