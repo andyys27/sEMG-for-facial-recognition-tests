@@ -4,7 +4,7 @@ Pipeline de extremo a extremo para clasificar **expresiones faciales** a partir 
 
 ---
 
-## 🎯 Objetivo del proyecto
+## Objetivo del proyecto
 
 Desarrollar y evaluar un pipeline completo de Machine Learning y Deep Learning que, a partir de señales sEMG de 4 canales faciales, sea capaz de clasificar 5 estados/expresiones:
 
@@ -18,7 +18,7 @@ El eje central del proyecto no es solo entrenar clasificadores, sino **medir su 
 
 ---
 
-## 🧠 ¿Por qué LOSO y no K-Fold tradicional?
+## ¿Por qué LOSO y no K-Fold tradicional?
 
 En señales biológicas como el sEMG, cada persona tiene una "firma" fisiológica propia (fuerza muscular, ubicación de electrodos, impedancia de piel, etc.). Un K-Fold estratificado normal mezcla ventanas del mismo sujeto entre train y test, por lo que el modelo puede aprender a reconocer *a la persona* en vez del *gesto*, inflando artificialmente el rendimiento.
 
@@ -28,7 +28,7 @@ El script [`main/diagnose_generalization.py`](main/diagnose_generalization.py) c
 
 ---
 
-## 🔬 Pipeline del proyecto
+## Pipeline del proyecto
 
 ```
 Señal cruda sEMG (4 canales)
@@ -66,7 +66,7 @@ Señal cruda sEMG (4 canales)
 
 ---
 
-## 📊 Datos y metodología
+## Datos y metodología
 
 ### Clases de expresión facial (5 clases)
 Reposo · Sonrisa · Triste · Disgusto · Sorprendido
@@ -99,7 +99,7 @@ Para la CNN se usa en cambio la forma de onda cruda por canal (`EMG*_Filtered`),
 
 ---
 
-## 📈 Resultados (LOSO, escenario `all_data`)
+## Resultados (LOSO, escenario `all_data`)
 
 | Modelo | Accuracy (agregado) | Macro F1 | Weighted F1 |
 |---|---|---|---|
@@ -122,7 +122,7 @@ python -m main.compare_models
 
 ---
 
-## 📁 Estructura del repositorio
+## Estructura del repositorio
 
 ```
 .
@@ -175,7 +175,7 @@ python -m main.compare_models
 
 ---
 
-## ⚙️ Instalación
+## Instalación
 
 ```bash
 git clone https://github.com/andyys27/sEMG-for-facial-recognition-tests.git
@@ -252,7 +252,7 @@ python -m main.error_analysis            # análisis de errores por clase/sujeto
 
 ---
 
-## 🧩 Añadir un nuevo sujeto
+## Añadir un nuevo sujeto
 
 1. Crea una carpeta `TestN/Data/` con la señal cruda (`FREEEMG_EMG_with_timestamp.csv`).
 2. Ejecuta el preprocesamiento (`main.py`) y la segmentación (`run_segmentation.py`) apuntando a esa carpeta, ajustando `channel_groups` y umbrales (`k_baseline_per_group`) según la calibración del sujeto.
@@ -263,7 +263,7 @@ Cuantos más sujetos se agreguen, más confiables serán las métricas LOSO y la
 
 ---
 
-## 📌 Notas y limitaciones
+## Notas y limitaciones
 
 - El dataset actual incluye únicamente **2 sujetos** (`Test1`, `Test2`), por lo que los resultados reportados son una prueba de concepto del pipeline y no deben interpretarse como una medida definitiva de generalización.
 - `diagnose_generalization.py` está pensado justamente para diferenciar si un F1 bajo en alguna clase se debe a variabilidad real entre sujetos (se necesitan más sujetos) o a un problema de la señal/etiquetado en sí (revisar segmentación o sincronización de eventos).
@@ -271,7 +271,7 @@ Cuantos más sujetos se agreguen, más confiables serán las métricas LOSO y la
 
 ---
 
-## 📚 Referencias
+# Referencias
 
 - Hudgins, B., Parker, P., & Scott, R. N. (1993). *A new strategy for multifunction myoelectric control*. IEEE Transactions on Biomedical Engineering.
 - Phinyomark, A., Phukpattaranont, P., & Limsakul, C. (2012). *Feature reduction and selection for EMG signal classification*. Expert Systems with Applications.
