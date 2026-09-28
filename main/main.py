@@ -5,7 +5,7 @@ import pandas as pd
 from pipeline import emg_processing_pipeline
 
 # Rutas de Test
-base_path = Path("../Test3")
+base_path = Path("../Test1")
 
 # Rutas derivadas
 data_path = base_path / "Data" / "FREEEMG_EMG_with_timestamp.csv"
@@ -41,7 +41,7 @@ processed_data_dict = {
 # Procesamiento por canal
 for col in emg_channels:
     raw_signal = data[col].values
-    sig = emg_processing_pipeline(raw_signal, fs)z
+    sig = emg_processing_pipeline(raw_signal, fs)
 
     # Diccionario de analisis
     processed_data_dict[f"{col}_Raw"] = sig["raw"]
