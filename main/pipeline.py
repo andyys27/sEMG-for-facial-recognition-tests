@@ -1,4 +1,4 @@
-from processing import *
+from main.processing import *
 
 def emg_processing_pipeline(raw_signal, fs):
     # Remover desfase de corriente continua

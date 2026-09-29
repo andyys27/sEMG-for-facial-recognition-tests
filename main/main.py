@@ -2,18 +2,21 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from pipeline import emg_processing_pipeline
+from main.pipeline import emg_processing_pipeline
 
 # Rutas de Test
-base_path = Path("../Test1")
+base_path = Path("data")
 
 # Rutas derivadas
-data_path = base_path / "Data" / "FREEEMG_EMG_with_timestamp.csv"
-analysis_path = base_path / "Analysis"
-output_path = base_path / "Data" / "FREEEMG_Processed_Signals.csv"
+subject_path = "subject_01"
+session_path = "session_01"
+data_path = base_path / "raw" / subject_path / session_path / "FREEEMG_EMG_with_timestamp.csv"
+analysis_path = base_path / "Analysis" / subject_path / session_path
+output_path = base_path / "interim" / subject_path / session_path / "FREEEMG_Processed_Signals.csv"
 
 # Crear carpeta de analisis
 analysis_path.mkdir(parents=True, exist_ok=True)
+output_path.parent.mkdir(parents=True, exist_ok=True)
 
 # Carga de datos
 data = pd.read_csv(data_path)
