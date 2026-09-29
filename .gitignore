@@ -1,8 +1,6 @@
 # ARCHIVOS DE TEXTO Y SENALES CRUDAS
-Test*/Data/Baiobit*
-Test*/Data/FREEEMG_EMG_no_timestamp.csv
-Test*/Data/FREEEMG_Processed_Signals.csv
-Test*/Data/processed_labeled.csv
+data/raw/*
+data/interim/*
 
 # ENTORNO DE METRICAS
 Test*/Active_Channels/detection_metrics.csv
