@@ -1,7 +1,7 @@
 # ARCHIVOS DE TEXTO Y SENALES CRUDAS
 data/raw/subject_*/session_*/*.json
 data/interim/*
-data/Analysis/*
+data/analysis/*
 
 # ENTORNO DE METRICAS
 Test*/Active_Channels/detection_metrics.csv
@@ -18,3 +18,5 @@ raw_windows.npz
 
 # COMPARACIONES DE MODELOS DE ML Y DL
 Results/comparison/*.csv
+
+__pycache__

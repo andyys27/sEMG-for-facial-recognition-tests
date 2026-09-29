@@ -1,0 +1,11 @@
+# Configuración de preprocesado sEMG
+notch_hz: 60
+lowcut_hz: 20
+highcut_hz: 450
+sampling_rate_hz: 1000
+rms_window_sec: 0.1
+zscore_window_sec: 5
+baseline_window_sec: 20
+activate_hysteresis: true
+onset_k: 4.5
+offset_k_ratio: 0.6
