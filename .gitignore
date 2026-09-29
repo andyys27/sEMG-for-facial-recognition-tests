@@ -1,6 +1,7 @@
 # ARCHIVOS DE TEXTO Y SENALES CRUDAS
 data/raw/*
 data/interim/*
+data/Analysis/*
 
 # ENTORNO DE METRICAS
 Test*/Active_Channels/detection_metrics.csv
