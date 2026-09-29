@@ -1,5 +1,5 @@
 # ARCHIVOS DE TEXTO Y SENALES CRUDAS
-data/raw/*
+data/raw/subject_*/session_*/*.json
 data/interim/*
 data/Analysis/*
 
