@@ -1,12 +1,12 @@
 {
   "name": "sesion02",
-  "ended": "2026-09-24 19:56:55.937369800",
+  "ended": "2026-09-24 20:42:40.305638900",
   "devices": {
     "free": {
       "fs_nominal": 1000.0,
-      "fs_estimated": 999.9878,
-      "drift_ppm": -12.2,
-      "samples": 246306,
+      "fs_estimated": 999.9586,
+      "drift_ppm": -41.4,
+      "samples": 280166,
       "dropped_reads": 0
     },
     "gs": {

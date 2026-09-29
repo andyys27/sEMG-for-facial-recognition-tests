@@ -8,8 +8,8 @@ from main.pipeline import emg_processing_pipeline
 base_path = Path("data")
 
 # Rutas derivadas
-subject_path = "subject_01"
-session_path = "session_01"
+subject_path = "subject_02"
+session_path = "session_05"
 data_path = base_path / "raw" / subject_path / session_path / "FREEEMG_EMG_with_timestamp.csv"
 analysis_path = base_path / "Analysis" / subject_path / session_path
 output_path = base_path / "interim" / subject_path / session_path / "FREEEMG_Processed_Signals.csv"
