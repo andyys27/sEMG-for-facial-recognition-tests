@@ -344,7 +344,7 @@ Esto permite importar de forma ordenada después:
 
 Antes que nada, crear los módulos que leen archivos y convierten datos a estructuras estándar:
 
-- src/io/load_emg.py
+- src/io/load_emg.py3
 - src/io/load_events.py
 - src/io/load_metadata.py
 - src/io/sync_timestamps.py
