@@ -1,0 +1,11 @@
+fs_hz: 1000              # se contrasta con la fs estimada de cada sesión
+n_channels: 4
+channel_names: [EMG1, EMG2, EMG3, EMG4]
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  analysis: data/analysis
+margins:
+  onset_s: 0.0           # margen tras el inicio del gesto (se ajusta en Fase 4)
+  offset_s: 0.0

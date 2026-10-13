@@ -1,22 +1,14 @@
-# ARCHIVOS DE TEXTO Y SENALES CRUDAS
-data/raw/subject_*/session_*/*.json
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Datos pesados: se versiona solo la estructura
 data/interim/*
+data/processed/*
 data/analysis/*
+!data/**/.gitkeep
 
-# ENTORNO DE METRICAS
-Test*/Active_Channels/detection_metrics.csv
-
-# EPOCAS RE CORTADAS POR EMOCION
-Test*/Sonrisa/*.csv
-Test*/Disgusto/*.csv
-Test*/Sorprendido/*.csv
-Test*/Triste/*.csv
-
-# DATASET DE ML Y DL
-features_dataset.csv
-raw_windows.npz
-
-# COMPARACIONES DE MODELOS DE ML Y DL
-Results/comparison/*.csv
-
-__pycache__
+*.keras
+*.h5

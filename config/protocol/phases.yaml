@@ -1,0 +1,7 @@
+phases: [Reposo, Countdown, Gesto]
+outside_label: Fuera_protocolo
+# Duración nominal del ÚLTIMO intervalo (sin evento siguiente), tomada de sequence_start
+tail_duration_param:
+  Reposo: rest_s
+  Countdown: countdown_s
+  Gesto: hold_s

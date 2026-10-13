@@ -1,0 +1,2 @@
+use_classes: [Reposo, Sonrisa, Triste, Disgusto, Sorprendido]
+exclude_phases: [Countdown]

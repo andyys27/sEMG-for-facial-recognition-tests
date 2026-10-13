@@ -353,7 +353,7 @@ Su objetivo no es etiquetar, sino preparar la sesión para que luego la capa de 
 
 #### 4. Crear la capa de protocolo
 
-Después de io, crear los módulos de etiqueta y protocolo:
+Después de io, crear `los módulos de etiqueta y protocolo:
 
 - src/protocol/parse_events.py
 - src/protocol/assign_phases.py
