@@ -1,0 +1,12 @@
+# Grupos musculares para features cruzadas (verifica con tu colocación de electrodos).
+# Según las desviaciones por etiqueta: Sonrisa activa EMG3/EMG4; Disgusto y Sorprendido EMG1/EMG2.
+channel_groups:
+  G12: [EMG1, EMG2]
+  G34: [EMG3, EMG4]
+
+zc_ssc_threshold: 0.000001      # V; umbral de amplitud para ZC y SSC (la señal está en volts)
+envelope_ms: 50                 # ventana de la envolvente RMS móvil dentro de cada ventana
+bands_hz:                       # bandas para potencia relativa
+  low:  [20, 60]
+  mid:  [60, 150]
+  high: [150, 450]

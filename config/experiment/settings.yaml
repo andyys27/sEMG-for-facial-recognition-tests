@@ -17,5 +17,5 @@ preprocessing:
 # Segundos que se recortan dentro de cada intervalo del protocolo.
 # Valores iniciales: se ajustan con scripts/inspect_margins.py (Paso 4).
 margins:
-  Gesto:  {onset_s: 0.5, offset_s: 0.0}
-  Reposo: {onset_s: 1.5, offset_s: 0.5}
+  Gesto:  {onset_s: 0.5,  offset_s: 0.0}
+  Reposo: {onset_s: 2.25, offset_s: 0.5}
