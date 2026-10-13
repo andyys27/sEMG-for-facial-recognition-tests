@@ -60,3 +60,27 @@ def emg(events):
     df = pd.DataFrame(np.zeros((len(t), 4)), columns=["EMG1", "EMG2", "EMG3", "EMG4"])
     df.insert(0, "t_ns", t)
     return df
+
+
+BURSTS = {"Sonrisa": [2, 3], "Disgusto": [0, 1], "Sorprendido": [0, 1], "Triste": []}   # canales activos
+
+
+@pytest.fixture
+def raw_session(tmp_path):
+    """Sesión cruda en disco (1000 Hz): ruido de 10 uV y ráfagas x10 durante cada gesto."""
+    sess = tmp_path / "raw" / "subject_01" / "session_01"
+    sess.mkdir(parents=True)
+    (sess / "Unity_events.csv").write_text(make_unity_csv(), encoding="utf-8")
+    ev = pd.read_csv(sess / "Unity_events.csv")
+    t = np.arange(ev.t_ns.min() - int(9e9), ev.t_ns.max() + int(5e9), int(1e6), dtype="int64")
+    amp = np.full((len(t), 4), 1e-5)
+    for _, r in ev[ev.label == "hold_start"].iterrows():
+        g = r.detail.split("gesture=")[1]
+        i0, i1 = np.searchsorted(t, [r.t_ns + int(0.3e9), r.t_ns + int(3.3e9)])
+        for c in BURSTS[g]:
+            amp[i0:i1, c] *= 10
+    emg = pd.DataFrame(np.random.default_rng(0).normal(0, 1, (len(t), 4)) * amp,
+                       columns=["EMG1", "EMG2", "EMG3", "EMG4"])
+    emg.insert(0, "Timestamp", pd.to_datetime(t, unit="ns").strftime("%Y-%m-%d %H:%M:%S.%f"))
+    emg.to_csv(sess / "FREEEMG_EMG_with_timestamp.csv", index=False)
+    return sess
