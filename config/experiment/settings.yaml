@@ -1,4 +1,4 @@
-fs_hz: 1000              # se contrasta con la fs estimada de cada sesión
+fs_hz: 1000              # referencia; cada sesión usa su fs estimada
 n_channels: 4
 channel_names: [EMG1, EMG2, EMG3, EMG4]
 paths:
@@ -6,6 +6,16 @@ paths:
   interim: data/interim
   processed: data/processed
   analysis: data/analysis
+
+preprocessing:
+  remove_dc: true
+  notch_hz: 60
+  notch_q: 30
+  bandpass_hz: [20, 450]
+  bandpass_order: 4
+
+# Segundos que se recortan dentro de cada intervalo del protocolo.
+# Valores iniciales: se ajustan con scripts/inspect_margins.py (Paso 4).
 margins:
-  onset_s: 0.0           # margen tras el inicio del gesto (se ajusta en Fase 4)
-  offset_s: 0.0
+  Gesto:  {onset_s: 0.5, offset_s: 0.0}
+  Reposo: {onset_s: 1.5, offset_s: 0.5}

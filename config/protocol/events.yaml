@@ -1,5 +1,5 @@
 # Evento de Unity (columna `label` del CSV) -> fase del protocolo.
-# null = evento estructural, no inicia una fase etiquetable.
+# null = evento estructural: no inicia una fase, pero cierra la anterior.
 events:
   session_start: null
   sequence_start: null
@@ -9,6 +9,4 @@ events:
   countdown_2: Countdown
   countdown_1: Countdown
   hold_start: Gesto
-  # TODO: confirmar los nombres reales de fin de sesión/secuencia en tus CSV completos
   sequence_end: null
-  session_end: null
