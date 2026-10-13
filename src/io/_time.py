@@ -1,4 +1,4 @@
-"""Conversion de timestamps a ns desde epoch (UTC naive, como los guarda Unity)."""
+"""Conversión de timestamps a ns desde epoch (UTC naive, como los guarda Unity)."""
 import pandas as pd
 
 _EPOCH = pd.Timestamp("1970-01-01")

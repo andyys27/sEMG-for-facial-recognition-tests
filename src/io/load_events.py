@@ -22,10 +22,10 @@ def load_events(path: str | Path) -> pd.DataFrame:
     """Carga Unity_events.csv.
 
     - `t_ns`: tiempo del evento ya alineado al reloj del PC (unity+offset). Es el
-      que se usa para etiquetar.
+      que se usará para etiquetar.
     - `ts_ns`: el mismo instante reconstruido desde la columna Timestamp (control).
-    - `label` se renombra a `event`; `detail` se expande en trial/rep/gesture_idx/
-      gesture/reason.
+    - `label` se renombra a `event`; `detail` se expande en
+      trial / rep / gesture_idx / gesture / reason.
     """
     df = pd.read_csv(path)
     df.columns = [c.strip() for c in df.columns]

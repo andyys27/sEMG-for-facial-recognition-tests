@@ -1,6 +1,6 @@
-"""Valida y sincroniza EMG + eventos de Unity en una misma linea de tiempo.
+"""Valida y sincroniza EMG + eventos de Unity en una misma línea de tiempo.
 
-Todo el proyecto usa `t_ns` (int64, ns desde epoch UTC) como reloj comun:
+Todo el proyecto usa `t_ns` (int64, ns desde epoch UTC) como reloj común:
 - EMG/IMU: derivado de su columna Timestamp.
 - Unity: columna t_ns (ya corregida con offset al reloj del PC).
 """
@@ -16,7 +16,7 @@ from .load_events import load_events
 
 @dataclass
 class Session:
-    """Estructura estandar de una sesion; entrada de la capa protocol."""
+    """Estructura estándar de una sesión; entrada de la capa protocol."""
     subject: str
     session: str
     emg: pd.DataFrame
@@ -51,8 +51,8 @@ def sync_timestamps(emg: pd.DataFrame, events: pd.DataFrame, meta: dict | None =
                     tol_ms: float = 1.0) -> Session:
     """Valida consistencia entre fuentes y devuelve una Session con `report`.
 
-    Errores (ValueError): relojes no monotonos o EMG y eventos sin solapamiento.
-    Warnings: eventos fuera del rango del EMG, huecos en la senal, y desfase entre
+    Errores (ValueError): relojes no monótonos o EMG y eventos sin solapamiento.
+    Warnings: eventos fuera del rango del EMG, huecos en la señal y desfase entre
     `t_ns` y `Timestamp` del CSV de Unity mayor que `tol_ms`.
     """
     rep = {"emg": _check_clock(emg, "EMG")}
@@ -77,7 +77,8 @@ def sync_timestamps(emg: pd.DataFrame, events: pd.DataFrame, meta: dict | None =
 
     rep["events"] = {"n": int(len(events)), "outside_emg": outside, "clock_skew_ms": skew_ms,
                      "protocol_span_s": float((ev_t.max() - ev_t.min()) / 1e9)}
-    return Session(subject, session, emg, events, meta or {}, imu, rep)
+    return Session(subject, session, emg, events, {} if meta is None else meta,
+                   {} if imu is None else imu, rep)
 
 
 def _find(dir_: Path, pattern: str) -> Path | None:
@@ -86,10 +87,10 @@ def _find(dir_: Path, pattern: str) -> Path | None:
 
 
 def load_session(session_dir: str | Path, subject: str | None = None) -> Session:
-    """Carga una carpeta data/raw/<subject>/<session>/ y sincroniza.
+    """Carga data/raw/<subject>/<session>/ y sincroniza.
 
-    Busca: *EMG*with_timestamp.csv, Unity_events.csv, *meta.json (opcional) y
-    Baiobit*.csv (opcional).
+    Busca: *EMG*with_timestamp.csv, Unity_events.csv, *meta.json (opcional)
+    y Baiobit*.csv (opcional).
     """
     d = Path(session_dir)
     emg_p, ev_p = _find(d, "*EMG*with_timestamp.csv"), _find(d, "Unity_events.csv")
