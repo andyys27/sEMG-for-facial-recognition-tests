@@ -1,0 +1,24 @@
+seed: 42
+# Submuestrea las clases mayoritarias en el ENTRENAMIENTO de cada fold (el test no se toca).
+# Todos los modelos ven los mismos datos balanceados, así la comparación es justa.
+balance_train: true
+
+# Hiperparámetros FIJOS (sin búsqueda): ajustarlos con los mismos folds de evaluación
+# inflaría las métricas.
+models:
+  dummy: {strategy: stratified}          # referencia de azar
+  rf:  {n_estimators: 300, min_samples_leaf: 2, n_jobs: -1}
+  svm: {kernel: rbf, C: 1.0, gamma: scale}
+  knn: {n_neighbors: 7, weights: distance}
+  lda: {}
+  mlp: {hidden_layer_sizes: [64, 32], alpha: 0.001, max_iter: 500}
+
+cnn:                                     # requiere tensorflow (requirements-cnn.txt)
+  normalize: arcsinh                     # arcsinh | standard
+  filters: [32, 64]
+  dropout: 0.3
+  lr: 0.001
+  epochs: 40
+  batch_size: 64
+  patience: 8
+  val_frac: 0.2                          # fracción de SEGMENTOS de entrenamiento para validación

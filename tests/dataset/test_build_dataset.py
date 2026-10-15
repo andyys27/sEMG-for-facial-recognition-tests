@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from src.features import extract_features
-from src.dataset import build_dataset, get_splits, feature_columns, export_dataset
+from src.dataset import build_dataset, get_splits, feature_columns, export_dataset, load_dataset
 
 CH = ["EMG1", "EMG2", "EMG3", "EMG4"]
 FS = 1000
@@ -85,3 +85,12 @@ def test_export(seg_dir, tmp_path):
     df, raw = build_dataset(seg_dir)
     p_csv, p_raw = export_dataset(df, raw, tmp_path / "out")
     assert p_csv.exists() and p_raw.exists()
+
+
+def test_export_load_roundtrip(seg_dir, tmp_path):
+    df, raw = build_dataset(seg_dir)
+    export_dataset(df, raw, tmp_path / "out")
+    df2, raw2 = load_dataset(tmp_path / "out")                  # no debe requerir pickle
+    assert len(df2) == len(df) and raw2["windows"].shape[0] == len(df2)
+    assert raw2["label"].tolist() == df["label"].tolist()
+    assert load_dataset(tmp_path / "out", with_raw=False)[1] is None

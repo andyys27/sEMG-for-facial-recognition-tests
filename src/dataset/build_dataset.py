@@ -49,6 +49,7 @@ def build_dataset(segments_dir: str | Path = "data/processed/segments",
     raw_w = np.concatenate(raws)
     keep = df["label"].isin(ccfg["use_classes"]).to_numpy()
     df, raw_w = df[keep].reset_index(drop=True), raw_w[keep]
-    raw = {"windows": raw_w, "channels": np.array(channels_ref),
-           **{c: df[c].to_numpy() for c in META_COLS}}
+    meta = {c: df[c].to_numpy() for c in META_COLS}
+    meta = {c: (v.astype(str) if v.dtype == object else v) for c, v in meta.items()}   # texto -> unicode (sin pickle)
+    raw = {"windows": raw_w, "channels": np.array(channels_ref), **meta}
     return df, raw
