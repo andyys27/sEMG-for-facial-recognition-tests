@@ -1,0 +1,3 @@
+window_ms: 200
+overlap: 0.5
+min_segment_ms: 500

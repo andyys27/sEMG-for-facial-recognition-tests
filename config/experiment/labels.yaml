@@ -1,0 +1,9 @@
+classes:                 # clases de clasificación
+  Reposo: 0
+  Sonrisa: 1
+  Triste: 2
+  Disgusto: 3
+  Sorprendido: 4
+special:                 # no entran al entrenamiento por defecto
+  Countdown: -1
+  Fuera_protocolo: -2

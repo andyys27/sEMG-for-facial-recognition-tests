@@ -1,0 +1,12 @@
+# Evento de Unity (columna `label` del CSV) -> fase del protocolo.
+# null = evento estructural: no inicia una fase, pero cierra la anterior.
+events:
+  session_start: null
+  sequence_start: null
+  rest_start: Reposo
+  gesture_show: Countdown
+  countdown_3: Countdown
+  countdown_2: Countdown
+  countdown_1: Countdown
+  hold_start: Gesto
+  sequence_end: null
