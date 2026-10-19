@@ -1,1 +1,3 @@
-strategy: auto            # auto | loso | leave_one_rep_out
+# auto | loso | leave_one_rep_outb
+strategy: loso
+group_by: subject
