@@ -77,8 +77,9 @@ def sync_timestamps(emg: pd.DataFrame, events: pd.DataFrame, meta: dict | None =
 
     rep["events"] = {"n": int(len(events)), "outside_emg": outside, "clock_skew_ms": skew_ms,
                      "protocol_span_s": float((ev_t.max() - ev_t.min()) / 1e9)}
-    return Session(subject, session, emg, events, {} if meta is None else meta,
-                   {} if imu is None else imu, rep)
+    return Session(subject=subject, session=session, emg=emg, events=events,
+                   meta={} if meta is None else meta,
+                   imu={} if imu is None else imu, report=rep)
 
 
 def _find(dir_: Path, pattern: str) -> Path | None:
@@ -98,7 +99,10 @@ def load_session(session_dir: str | Path, subject: str | None = None) -> Session
         raise FileNotFoundError(f"{d}: se requieren *EMG*with_timestamp.csv y Unity_events.csv")
     meta_p, imu_p = _find(d, "*meta.json"), _find(d, "Baiobit*.csv")
     return sync_timestamps(
-        load_emg(emg_p), load_events(ev_p),
-        load_imu(imu_p) if imu_p else None,
-        subject=subject or d.parent.name, session=d.name,
+        load_emg(emg_p),
+        load_events(ev_p),
+        meta={},
+        imu=load_imu(imu_p) if imu_p else None,
+        subject=subject or d.parent.name,
+        session=d.name,
     )

@@ -1,3 +1,2 @@
-# auto | loso | leave_one_rep_outb
-strategy: loso
-group_by: subject
+# auto: usa loso si hay >= 2 sujetos; si hay uno solo, leave_one_rep_out
+strategy: auto            # auto | loso | leave_one_rep_out

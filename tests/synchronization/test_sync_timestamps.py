@@ -1,5 +1,6 @@
+import pandas as pd
 import pytest
-from src.io import sync_timestamps, load_emg
+from src.io import sync_timestamps, load_emg, load_session
 
 
 def test_load_events_expands_detail(events):
@@ -38,3 +39,26 @@ def test_load_emg_parses_nanoseconds(tmp_path):
     df = load_emg(p)
     assert df.t_ns.iloc[0] == 1790279080176214784
     assert df.t_ns.diff().iloc[1] == 2_000_000
+
+
+def test_load_session_keeps_imu_dataframe(raw_session):
+    ts = pd.to_datetime([1_700_000_000_000_000_000, 1_700_000_000_001_000_000,
+                         1_700_000_000_002_000_000], unit="ns")
+    imu = pd.DataFrame({
+        "Timestamp": ts.strftime("%Y-%m-%d %H:%M:%S.%f"),
+        "ax": [0.1, 0.2, 0.3],
+        "ay": [0.2, 0.3, 0.4],
+        "az": [0.3, 0.4, 0.5],
+        "gx": [0.4, 0.5, 0.6],
+        "gy": [0.5, 0.6, 0.7],
+        "gz": [0.6, 0.7, 0.8],
+        "roll": [1.0, 1.1, 1.2],
+        "pitch": [2.0, 2.1, 2.2],
+        "yaw": [3.0, 3.1, 3.2],
+    })
+    (raw_session / "Baiobit_with_timestamp.csv").write_text(imu.to_csv(index=False), encoding="utf-8")
+
+    s = load_session(raw_session)
+    assert isinstance(s.imu, pd.DataFrame)
+    assert "t_ns" in s.imu.columns
+    assert "ax" in s.imu.columns
