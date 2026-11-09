@@ -49,8 +49,8 @@ def label_session(session) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 def export_labels(session, intervals: pd.DataFrame, labels: pd.DataFrame,
                   out_dir: str | Path = "data/processed/labels") -> tuple[Path, Path]:
-    """Escribe <subject>_<session>_intervals.csv y _labels.csv (unible por t_ns)."""
-    out = Path(out_dir)
+    """Escribe <subject>/<session>/<subject>_<session>_intervals.csv y _labels.csv."""
+    out = Path(out_dir) / str(session.subject) / str(session.session)
     out.mkdir(parents=True, exist_ok=True)
     stem = f"{session.subject}_{session.session}"
     p_iv, p_lb = out / f"{stem}_intervals.csv", out / f"{stem}_labels.csv"

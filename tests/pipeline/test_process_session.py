@@ -7,8 +7,8 @@ def test_raw_session_to_dataset(raw_session, tmp_path):
     out = tmp_path / "segments"
     r = process_session(raw_session, out, interim_root=tmp_path / "interim", labels_dir=tmp_path / "labels")
     assert r["segments"].valid.all()
-    assert (out / "subject_01_session_01_windows.npz").exists()
-    assert (tmp_path / "labels" / "subject_01_session_01_labels.csv").exists()
+    assert (out / "subject_01" / "session_01" / "subject_01_session_01_windows.npz").exists()
+    assert (tmp_path / "labels" / "subject_01" / "session_01" / "subject_01_session_01_labels.csv").exists()
 
     df, raw = build_dataset(out)
     assert set(df.label) == {"Reposo", "Sonrisa", "Disgusto", "Sorprendido", "Triste"}

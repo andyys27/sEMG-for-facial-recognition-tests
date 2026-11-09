@@ -22,9 +22,9 @@ def build_dataset(segments_dir: str | Path = "data/processed/segments",
     """
     fcfg = features_cfg or load_yaml("dataset/features.yaml")
     ccfg = classes_cfg or load_yaml("dataset/classes.yaml")
-    files = sorted(Path(segments_dir).glob("*_windows.npz"))
+    files = sorted(Path(segments_dir).rglob("*_windows.npz"))
     if not files:
-        raise FileNotFoundError(f"No hay *_windows.npz en {segments_dir}")
+        raise FileNotFoundError(f"No hay *_windows.npz en {segments_dir} ni subdirectorios")
 
     frames, raws, channels_ref = [], [], None
     for f in files:

@@ -51,7 +51,7 @@ def process_session(session_dir: str | Path, out_dir: str | Path = "data/process
         "n_samples": len(g.data), "valid": g.valid, "reason": g.reason,
         "n_windows": int(n_win.get(g.segment_id, 0))} for g in segs])
 
-    out = Path(out_dir)
+    out = Path(out_dir) / str(s.subject) / str(s.session)
     out.mkdir(parents=True, exist_ok=True)
     table.to_csv(out / f"{stem}_segments.csv", index=False)
     save_windows(out / f"{stem}_windows.npz", data, channels=channels, fs_hz=fs,
